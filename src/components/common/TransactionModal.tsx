@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { use, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +21,7 @@ import {
 import { useTransactionStore } from "@/store/transactionStore"
 import { Calendar, DollarSign } from "lucide-react"
 import { toast } from "sonner"
+import { useDashboardStore } from "@/store/dashboardStore"
 
 type Props = {
   open: boolean
@@ -41,6 +42,8 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     getIncomeCategories,
     getExpenseCategories,
   } = useTransactionStore()
+
+  const { fetchSummary } = useDashboardStore()
 
   // choose categories based on type
   const categories = isIncome ? incomeCategories : expenseCategories
