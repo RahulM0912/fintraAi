@@ -22,12 +22,19 @@ const MONTH_NAMES = [
 ];
 
 export function HistoryCard() {
-  const now = new Date();
-  const [year, setYear] = useState<number>(now.getFullYear());
-  const [month, setMonth] = useState<number>(now.getMonth() + 1); // 1-12
+  const [year, setYear] = useState<number | null>(null);
+  const [month, setMonth] = useState<number | null>(null); // 1-12
   const [isMonthly, setIsMonthly] = useState<boolean>(true);
   const [showIncome, setShowIncome] = useState<boolean>(true);
   const [showExpense, setShowExpense] = useState<boolean>(true);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const now = new Date();
+    setYear(now.getFullYear());
+    setMonth(now.getMonth() + 1);
+  }, []);
 
   const {
     monthHistory, // expected: [{ day: 1, income: 100, expense: 100 }, ...]
@@ -38,6 +45,8 @@ export function HistoryCard() {
 
   // fetch when year/month change or view toggles
   useEffect(() => {
+    if (year === null || month === null) return;
+    
     if (isMonthly) {
       fetchMonthHistory(year, month);
     } else {
@@ -47,7 +56,7 @@ export function HistoryCard() {
 
   // transform monthHistory -> full days array for chart (1..daysInMonth)
   const chartDataForMonth = useMemo(() => {
-    if (!isMonthly) return [];
+    if (!isMonthly || year === null || month === null) return [];
 
     // days in month: new Date(year, month, 0).getDate() works with month 1..12
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -103,7 +112,21 @@ export function HistoryCard() {
   const chartData = isMonthly ? chartDataForMonth : chartDataForYear;
 
   // simple year options (5 years: current .. -4)
-  const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
+  // use either year from state or fallback to current year if not yet set
+  const currentYear = year || new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+
+  if (!isMounted || year === null || month === null) {
+    return (
+      <Card>
+        <CardContent>
+          <div className="h-[340px] flex items-center justify-center">
+            Loading history...
+          </div>
+        </CardContent>
+      </Card>
+    ); // loading skeleton preventing hydration mismatch
+  }
 
   return (
     <Card>
@@ -191,7 +214,7 @@ export function HistoryCard() {
                   interval={isMonthly ? 0 : "preserveEnd"}
                 />
                 <YAxis />
-                <Tooltip formatter={(value: number) => new Intl.NumberFormat("en-IN").format(value)} />
+                <Tooltip formatter={(value: any) => new Intl.NumberFormat("en-IN").format(Number(value))} />
                 <Legend />
                 {showIncome && (
                   <Bar

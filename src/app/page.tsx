@@ -1,6 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function LandingPage() {
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-800">
       
@@ -48,9 +57,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="mt-24 mb-6 text-gray-600 text-sm text-center">
-        © {new Date().getFullYear()} Fintra AI. All rights reserved.
+        © {year} Fintra AI. All rights reserved.
       </footer>
     </main>
   );

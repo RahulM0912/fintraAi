@@ -48,6 +48,24 @@ export default function SummaryCard() {
     maximumFractionDigits: 0,
   });
 
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <Card>
+        <CardContent>
+          <div className="h-[340px] flex items-center justify-center">
+            Loading summary...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent>
@@ -95,7 +113,7 @@ export default function SummaryCard() {
                               <Cell key={`cell-${i}`} fill={DEFAULT_COLORS[i % DEFAULT_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => formatter.format(value)} />
+                          <Tooltip formatter={(value: any) => formatter.format(Number(value))} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -146,7 +164,7 @@ export default function SummaryCard() {
                               <Cell key={`cell-exp-${i}`} fill={DEFAULT_COLORS[i % DEFAULT_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => formatter.format(value)} />
+                          <Tooltip formatter={(value: any) => formatter.format(Number(value))} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>

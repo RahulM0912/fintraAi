@@ -10,11 +10,15 @@ import SummaryCard from "@/components/dashboard/SummaryCard"
 import { HistoryCard } from "@/components/dashboard/HistoryCard"
 
 export default function Dashboard() {
-  const today = new Date()
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(today.getFullYear(), today.getMonth(), 1),
-    to: today
-  })
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+
+  useEffect(() => {
+    const today = new Date();
+    setDate({
+      from: new Date(today.getFullYear(), today.getMonth(), 1),
+      to: today
+    });
+  }, []);
  
 
   const { fetchAllCategories } = useTransactionStore()
@@ -22,9 +26,11 @@ export default function Dashboard() {
 
   // initial load
   useEffect(() => {
-    // loadHistory()
     fetchAllCategories();
-    fetchSummary(date?.from?.toISOString() || "", date?.to?.toISOString() || "");
+    
+    if (date?.from && date?.to) {
+      fetchSummary(date.from.toISOString(), date.to.toISOString());
+    }
   }, [fetchAllCategories, fetchSummary, date]);
 
   return (

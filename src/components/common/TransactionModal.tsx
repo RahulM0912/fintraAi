@@ -1,6 +1,6 @@
 "use client"
 
-import React, { use, useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -43,8 +43,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     getExpenseCategories,
   } = useTransactionStore()
 
-  const { fetchSummary } = useDashboardStore()
-
   // choose categories based on type
   const categories = isIncome ? incomeCategories : expenseCategories
 
@@ -53,8 +51,14 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
   const [amount, setAmount] = useState<number | "">("")
   const [categoryId, setCategoryId] = useState<string | number | null>(null)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10)) // yyyy-mm-dd
+  const [date, setDate] = useState<string>("") // yyyy-mm-dd
   const [localError, setLocalError] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+    setDate(new Date().toISOString().slice(0, 10))
+  }, [])
 
   // load categories when modal opens (if not loaded)
   useEffect(() => {

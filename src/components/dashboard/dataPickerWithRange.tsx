@@ -24,7 +24,22 @@ export function DatePickerWithRange({date, setDate}: DatePickerWithRangeProps) {
   //   to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
   // })
 
-  
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <Field className="mx-auto w-60">
+        <Button variant="outline" className="justify-start px-2.5 font-normal w-full" disabled>
+          <CalendarIcon />
+          <span>Loading...</span>
+        </Button>
+      </Field>
+    );
+  }
 
   return (
     <Field className="mx-auto w-60">
@@ -33,7 +48,7 @@ export function DatePickerWithRange({date, setDate}: DatePickerWithRangeProps) {
           <Button
             variant="outline"
             id="date-picker-range"
-            className="justify-start px-2.5 font-normal"
+            className="justify-start px-2.5 font-normal w-full"
           >
             <CalendarIcon />
             {date?.from ? (
