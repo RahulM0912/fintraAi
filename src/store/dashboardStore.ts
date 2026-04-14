@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 export const useDashboardStore = create<DashBoardStoreState>((set) => ({
   isSummaryLoading: false,
+  isRecentTransactionsLoading: false,
   isLoading: false,
   totalIncome: 0,
   totalExpense: 0,
@@ -11,11 +12,12 @@ export const useDashboardStore = create<DashBoardStoreState>((set) => ({
   expenseByCategory: [],
   monthHistory: [],
   yearHistory: [],
+  recentTransactions: [],
 
   fetchSummary: async (startDate: string, endDate: string) => {
     try {
       set({ isSummaryLoading: true });
-      const response = await fetch(`/api/summary?startDate=${startDate}&endDate=${endDate}`)
+      const response = await fetch(`/api/summary?startDate=${startDate}&endDate=${endDate}&_t=${Date.now()}`, { cache: 'no-store' })
       if(!response.ok) {
         const text = response.statusText || `Failed to fetch summary: ${response.status}`
         throw new Error(text)
@@ -68,6 +70,23 @@ export const useDashboardStore = create<DashBoardStoreState>((set) => ({
       console.error("Error fetching year history:", error);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchRecentTransactions: async () => {
+    try {
+      set({ isRecentTransactionsLoading: true });
+      const response = await fetch(`/api/transactions?limit=7&_t=${Date.now()}`, { cache: 'no-store' });
+      if(!response.ok) {
+        throw new Error(`Failed to fetch transactions: ${response.status}`);
+      }
+      const data = await response.json();
+      set({ recentTransactions: data.data || [] });
+    } catch (error) {
+      console.error("Error fetching recent transactions:", error);
+      set({ recentTransactions: [] });
+    } finally {
+      set({ isRecentTransactionsLoading: false });
     }
   }
 }))

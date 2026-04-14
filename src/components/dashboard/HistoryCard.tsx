@@ -1,241 +1,31 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useDashboardStore } from "@/store/dashboardStore";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-} from "recharts";
-import { addMonths } from "date-fns"; // only for safe month increment if needed
-
-const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
+import { Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 
 export function HistoryCard() {
-  const [year, setYear] = useState<number | null>(null);
-  const [month, setMonth] = useState<number | null>(null); // 1-12
-  const [isMonthly, setIsMonthly] = useState<boolean>(true);
-  const [showIncome, setShowIncome] = useState<boolean>(true);
-  const [showExpense, setShowExpense] = useState<boolean>(true);
-  const [isMounted, setIsMounted] = useState<boolean>(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const now = new Date();
-    setYear(now.getFullYear());
-    setMonth(now.getMonth() + 1);
-  }, []);
-
-  const {
-    monthHistory, // expected: [{ day: 1, income: 100, expense: 100 }, ...]
-    yearHistory,  // expected: [{ month: 1, income: 10000, expense: 1000 }, ...]
-    fetchMonthHistory,
-    fetchYearHistory,
-  } = useDashboardStore();
-
-  // fetch when year/month change or view toggles
-  useEffect(() => {
-    if (year === null || month === null) return;
-    
-    if (isMonthly) {
-      fetchMonthHistory(year, month);
-    } else {
-      fetchYearHistory(year);
-    }
-  }, [isMonthly, year, month, fetchMonthHistory, fetchYearHistory]);
-
-  // transform monthHistory -> full days array for chart (1..daysInMonth)
-  const chartDataForMonth = useMemo(() => {
-    if (!isMonthly || year === null || month === null) return [];
-
-    // days in month: new Date(year, month, 0).getDate() works with month 1..12
-    const daysInMonth = new Date(year, month, 0).getDate();
-
-    const mapByDay = new Map<number, { income: number; expense: number }>();
-    (monthHistory || []).forEach((r: any) => {
-      // ensure numbers
-      mapByDay.set(Number(r.day), {
-        income: Number(r.income || 0),
-        expense: Number(r.expense || 0),
-      });
-    });
-
-    const arr = Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const found = mapByDay.get(day) ?? { income: 0, expense: 0 };
-      return {
-        day: String(day).padStart(2, "0"), // "01", "02" matching your screenshot labels
-        income: found.income,
-        expense: found.expense,
-      };
-    });
-
-    return arr;
-  }, [isMonthly, monthHistory, year, month]);
-
-  // transform yearHistory -> 12 months array
-  const chartDataForYear = useMemo(() => {
-    if (isMonthly) return [];
-
-    const mapByMonth = new Map<number, { income: number; expense: number }>();
-    (yearHistory || []).forEach((r: any) => {
-      mapByMonth.set(Number(r.month), {
-        income: Number(r.income || 0),
-        expense: Number(r.expense || 0),
-      });
-    });
-
-    const arr = Array.from({ length: 12 }, (_, i) => {
-      const m = i + 1;
-      const found = mapByMonth.get(m) ?? { income: 0, expense: 0 };
-      return {
-        month: m,
-        monthLabel: MONTH_NAMES[i],
-        income: found.income,
-        expense: found.expense,
-      };
-    });
-
-    return arr;
-  }, [isMonthly, yearHistory]);
-
-  const chartData = isMonthly ? chartDataForMonth : chartDataForYear;
-
-  // simple year options (5 years: current .. -4)
-  // use either year from state or fallback to current year if not yet set
-  const currentYear = year || new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
-  if (!isMounted || year === null || month === null) {
-    return (
-      <Card>
-        <CardContent>
-          <div className="h-[340px] flex items-center justify-center">
-            Loading history...
-          </div>
-        </CardContent>
-      </Card>
-    ); // loading skeleton preventing hydration mismatch
-  }
-
   return (
-    <Card>
-      <CardContent>
-        <div className="flex flex-col gap-4">
-          {/* Controls row */}
-          <div className="flex items-center gap-3">
-            {/* view toggles */}
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant={isMonthly ? "default" : "ghost"}
-                onClick={() => setIsMonthly(true)}
-              >
-                Month
-              </Button>
-              <Button
-                size="sm"
-                variant={!isMonthly ? "default" : "ghost"}
-                onClick={() => setIsMonthly(false)}
-              >
-                Year
-              </Button>
-            </div>
-
-            {/* year select */}
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="ml-2 rounded-md border px-2 py-1 bg-background text-sm"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-
-            {/* month select (only when monthly view) */}
-            {isMonthly && (
-              <select
-                value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
-                className="ml-2 rounded-md border px-2 py-1 bg-background text-sm"
-              >
-                {MONTH_NAMES.map((mName, idx) => (
-                  <option key={mName} value={idx + 1}>
-                    {mName}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <div className="ml-auto flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={showIncome}
-                  onChange={(e) => setShowIncome(e.target.checked)}
-                />
-                <span>Income</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={showExpense}
-                  onChange={(e) => setShowExpense(e.target.checked)}
-                />
-                <span>Expense</span>
-              </label>
-            </div>
+    <Card className="overflow-hidden border-indigo-100 dark:border-indigo-900/50 shadow-sm relative group">
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-pink-50/50 dark:from-indigo-950/20 dark:via-purple-950/20 dark:to-pink-950/20 pointer-events-none" />
+      <CardContent className="p-6 relative">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md">
+            <Sparkles className="h-5 w-5" />
           </div>
-
-          {/* Chart */}
-          <div className="w-full h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData as any}
-                margin={{ top: 16, right: 24, left: 8, bottom: 24 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey={isMonthly ? "day" : "monthLabel"}
-                  tick={{ fontSize: 12 }}
-                  interval={isMonthly ? 0 : "preserveEnd"}
-                />
-                <YAxis />
-                <Tooltip formatter={(value: any) => new Intl.NumberFormat("en-IN").format(Number(value))} />
-                <Legend />
-                {showIncome && (
-                  <Bar
-                    dataKey="income"
-                    name="Income"
-                    fill="#10b981" /* green */
-                    barSize={isMonthly ? 12 : 18}
-                    radius={[4, 4, 0, 0]}
-                  />
-                )}
-                {showExpense && (
-                  <Bar
-                    dataKey="expense"
-                    name="Expense"
-                    fill="#ef4444" /* red */
-                    barSize={isMonthly ? 12 : 18}
-                    radius={[4, 4, 0, 0]}
-                  />
-                )}
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex-1 space-y-1">
+            <h3 className="font-semibold text-base text-gray-900 dark:text-gray-100">AI Insight</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              You're spending <span className="font-medium text-orange-600 dark:text-orange-400">20% more on food</span> this month compared to last month. Consider cutting back on dining out to stay within your goal.
+            </p>
+            <div className="flex items-center gap-4 mt-3">
+              <button className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> Analyze Patterns
+              </button>
+              <button className="text-xs font-medium text-gray-500 hover:underline flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> Set Budget
+              </button>
+            </div>
           </div>
         </div>
       </CardContent>

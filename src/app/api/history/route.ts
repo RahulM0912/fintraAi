@@ -1,7 +1,9 @@
-import { pool } from "@/lib/db/connection";
+import { auth } from "@clerk/nextjs/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function GET(req: Request) {
-  const userId = "test_user_1"; // replace with Clerk later
+  const { userId } = await auth();
+  if (!userId) return new Response("Unauthorized", { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const year = searchParams.get("year");
@@ -11,35 +13,27 @@ export async function GET(req: Request) {
     return new Response("valid year and month are required", { status: 400 });
   }
 
-  try {
-    const result = await pool.query(
-      `
-      SELECT 
-        day, 
-        income, 
-        expense
-      FROM month_history 
-      WHERE user_id = $1
-        AND month = $2
-        AND year = $3
-      ORDER BY day ASC
-      `,
-      [userId, month, year]
-    );
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("month_history")
+    .select("day, income, expense")
+    .eq("user_id", userId)
+    .eq("month", Number(month))
+    .eq("year", Number(year))
+    .order("day");
 
-    const days = result.rows.map((row) => ({
+  if (error) {
+    console.error("[GET /api/history]", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+
+  return Response.json({
+    year,
+    month,
+    days: (data ?? []).map((row) => ({
       day: row.day,
       income: Number(row.income),
       expense: Number(row.expense),
-    }));
-
-    return Response.json({ 
-        year,
-        month,
-        days
-    });
-  } catch (error) {
-    console.error("Error fetching month history:", error);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-} 
+    })),
+  });
+}

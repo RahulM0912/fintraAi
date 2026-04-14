@@ -1,27 +1,23 @@
-import { pool } from '@/lib/db/connection';
+import { createAdminClient } from "@/utils/supabase/admin";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type');
+  const { searchParams } = new URL(req.url);
+  const type = searchParams.get("type");
 
-    if(type && type !== 'income' && type !== 'expense')  {
-      return new Response("Invalid category type", { status: 400 });
-    }
+  if (type && type !== "income" && type !== "expense") {
+    return new Response("Invalid category type", { status: 400 });
+  }
 
-    const query = `
-      SELECT id, name, icon
-      FROM categories
-      WHERE type = $1
-      ORDER BY name
-    `
+  const supabase = createAdminClient();
+  let query = supabase.from("categories").select("id, name, icon").order("name");
+  if (type) query = query.eq("type", type);
 
-    const value = [type];
-    const { rows} = await pool.query(query, value);
-
-    return Response.json(rows, { status: 200 });
-  } catch (error) {
-    console.error("Failed to fetch categories:", error);
+  const { data, error } = await query;
+  if (error) {
+    console.error("[GET /api/categories]", error);
     return new Response("Internal Server Error", { status: 500 });
   }
+
+  return Response.json(data, { status: 200 });
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,17 +11,12 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { useTransactionStore } from "@/store/transactionStore"
-import { Calendar, DollarSign } from "lucide-react"
+import { CalendarIcon, ChevronDown, DollarSign, Search, Tag } from "lucide-react"
 import { toast } from "sonner"
-import { useDashboardStore } from "@/store/dashboardStore"
+import { format } from "date-fns"
 
 type Props = {
   open: boolean
@@ -31,9 +26,9 @@ type Props = {
 }
 
 export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props) {
-  const isIncome = type === "income"
+  const [internalTxType, setInternalTxType] = useState<"income" | "expense">(type)
+  const isIncome = internalTxType === "income"
 
-  // store: categories + actions
   const {
     isLoading,
     expenseCategories,
@@ -43,77 +38,59 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     getExpenseCategories,
   } = useTransactionStore()
 
-  // choose categories based on type
   const categories = isIncome ? incomeCategories : expenseCategories
 
-  // form state
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState<number | "">("")
-  const [categoryId, setCategoryId] = useState<string | number | null>(null)
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
-  const [date, setDate] = useState<string>("") // yyyy-mm-dd
-  const [localError, setLocalError] = useState<string | null>(null)
-  const [isMounted, setIsMounted] = useState(false)
+  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [categoryOpen, setCategoryOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [catSearch, setCatSearch] = useState("")
+  const catSearchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    setIsMounted(true)
-    setDate(new Date().toISOString().slice(0, 10))
-  }, [])
-
-  // load categories when modal opens (if not loaded)
   useEffect(() => {
     if (!open) return
-
     if (isIncome) {
-      if (!incomeCategories || incomeCategories.length === 0) {
-        getIncomeCategories().catch(() => {
-          /* ignore, store sets error */
-        })
-      }
+      getIncomeCategories().catch(() => {})
     } else {
-      if (!expenseCategories || expenseCategories.length === 0) {
-        getExpenseCategories().catch(() => {
-          /* ignore */
-        })
-      }
+      getExpenseCategories().catch(() => {})
     }
-  }, [open, isIncome, getIncomeCategories, getExpenseCategories, incomeCategories, expenseCategories])
+    // store functions handle caching internally — don't add categories arrays here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isIncome])
 
-  // reset form on close
+  // Auto-focus search when category popover opens
+  useEffect(() => {
+    if (categoryOpen) {
+      setCatSearch("")
+      setTimeout(() => catSearchRef.current?.focus(), 50)
+    }
+  }, [categoryOpen])
+
   useEffect(() => {
     if (!open) {
       setDescription("")
       setAmount("")
       setCategoryId(null)
-      setSelectedIcon(null)
-      setDate(new Date().toISOString().slice(0, 10))
-      setLocalError(null)
+      setSelectedDate(new Date())
+      setCategoryOpen(false)
+      setCalendarOpen(false)
+      setCatSearch("")
     }
   }, [open])
 
-  // when user selects category id, also update selectedIcon from categories list
-  function handleCategoryChange(v: string) {
-    console.log("Selected value:", v, "Categories:", categories)
-    if (v === "uncategorized") {
-      setCategoryId(null)
-      setSelectedIcon(null)
-      return
-    }
-    // Don't convert UUID strings to numbers
-    setCategoryId(v)
-    const found = categories.find((c) => String(c.id) === String(v))
-    setSelectedIcon(found?.icon ?? null)
-    console.log("Category set to:", v, "Found:", found)
-  }
+  const selectedCategory = categories.find((c) => String(c.id) === String(categoryId))
+
+  const filteredCategories = catSearch.trim()
+    ? categories.filter((c) => c.name.toLowerCase().startsWith(catSearch.toLowerCase()))
+    : categories
 
   async function handleCreate() {
-    // Amount validation
     if (!amount || Number(amount) <= 0) {
       toast.error("Please enter a valid amount")
       return
     }
-
-    // Category validation (NOW REQUIRED)
     if (!categoryId) {
       toast.error("Please select a category")
       return
@@ -124,70 +101,84 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
         ? Number(categoryId)
         : categoryId
 
-    const payload = {
+    const created = await addTransaction(isIncome ? "income" : "expense", {
       description: description || undefined,
       amount: Number(amount),
       categoryId: normalizedCategory,
-      date,
-    }
-
-    const created = await addTransaction(isIncome ? "income" : "expense", payload)
+      date: format(selectedDate, "yyyy-MM-dd"),
+    })
 
     if (created) {
       toast.success(`${isIncome ? "Income" : "Expense"} added successfully`)
       onOpenChange(false)
+      window.dispatchEvent(new Event("transaction-added"))
       onSuccess?.(created)
     } else {
       toast.error("Failed to create transaction. Try again.")
     }
   }
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl sm:rounded-lg">
-        <DialogHeader className="flex items-start justify-between gap-4 pb-2">
-          <div>
-            <DialogTitle className="flex items-baseline gap-3">
-              <span className="text-lg font-semibold">
-                Create a new{" "}
-                <span
-                  className={`inline-flex items-center rounded px-2 py-0.5 font-medium ${
-                    isIncome ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {isIncome ? "income" : "expense"}
-                </span>{" "}
-                transaction
-              </span>
-            </DialogTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add a transaction to your account. This will update dashboard data.
-            </p>
-          </div>
+      <DialogContent className="max-w-lg rounded-2xl p-7 bg-white dark:bg-zinc-900">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="text-2xl font-bold leading-tight">
+            Create a{" "}
+            <span className={isIncome ? "text-emerald-500" : "text-rose-500"}>
+              new {isIncome ? "income" : "expense"}
+            </span>{" "}
+            transaction
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add a transaction to your account. This will update dashboard data.
+          </p>
         </DialogHeader>
 
-        {/* Form */}
-        <div className="grid gap-4 py-3">
-          <div>
-            <Label htmlFor="description" className="mb-2">
+        <div className="grid gap-5 py-3">
+          {/* Type toggle */}
+          <div className="flex rounded-xl border border-border overflow-hidden">
+            <button
+              onClick={() => { setInternalTxType("expense"); setCategoryId(null) }}
+              className={`flex-1 text-sm font-semibold py-2.5 transition-all ${
+                !isIncome
+                  ? "bg-white dark:bg-zinc-800 text-rose-500 shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Expense
+            </button>
+            <button
+              onClick={() => { setInternalTxType("income"); setCategoryId(null) }}
+              className={`flex-1 text-sm font-semibold py-2.5 transition-all ${
+                isIncome
+                  ? "bg-white dark:bg-zinc-800 text-emerald-600 shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Income
+            </button>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Description
             </Label>
             <Input
-              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Transaction description (optional)"
+              className="rounded-xl"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Keep it short — e.g. &quot;Freelance - Jan invoice&quot;.
+            <p className="text-xs text-muted-foreground">
+              Keep it short — e.g. &quot;Freelance - Jan Invoice&quot;.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            {/* Amount */}
-            <div>
-              <Label htmlFor="amount" className="mb-2">
+          {/* Amount + Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Amount
               </Label>
               <div className="relative">
@@ -195,73 +186,106 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
                   <DollarSign className="h-4 w-4" />
                 </span>
                 <Input
-                  id="amount"
                   type="number"
                   inputMode="decimal"
                   step="0.01"
+                  min={0}
                   value={amount as any}
                   onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
                   placeholder="0.00"
-                  className="pl-10"
-                  min={0}
+                  className="pl-9 rounded-xl"
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Transaction amount (required)</p>
+              <p className="text-xs text-muted-foreground">Transaction amount (required)</p>
             </div>
 
-            {/* Date */}
-            <div>
-              <Label htmlFor="date" className="mb-2">
-                Transaction date
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Transaction Date
               </Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                </span>
-                <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="pl-10" />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Select a date for this transaction</p>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{format(selectedDate, "MM/dd/yyyy")}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(d) => {
+                      if (d) { setSelectedDate(d); setCalendarOpen(false) }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">Select a date for this transaction</p>
             </div>
           </div>
 
-          <div>
-            <Label className="mb-2">Category</Label>
-
-            <Select onValueChange={handleCategoryChange} value={categoryId ? String(categoryId) : "uncategorized"}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <div  className="max-h-64 overflow-y-auto py-2">
-                  <SelectItem value="uncategorized">Select a category</SelectItem>
-
-                  {categories.map((c) => (
-                    <SelectItem
+          {/* Category — popover list like TransactionFilters */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Category
+            </Label>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
+                  <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className={selectedCategory ? "text-foreground" : "text-muted-foreground"}>
+                    {selectedCategory
+                      ? `${selectedCategory.icon}  ${selectedCategory.name}`
+                      : "Select a category"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
+                {/* Search */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    ref={catSearchRef}
+                    value={catSearch}
+                    onChange={(e) => setCatSearch(e.target.value)}
+                    placeholder="Search categories…"
+                    className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                <div className="max-h-52 overflow-y-scroll" onWheel={(e) => e.stopPropagation()}>
+                  {filteredCategories.length === 0 && (
+                    <p className="text-sm text-muted-foreground px-3 py-2">No results</p>
+                  )}
+                  {filteredCategories.map((c) => (
+                    <button
                       key={String(c.id)}
-                      value={String(c.id)}
+                      onClick={() => { setCategoryId(String(c.id)); setCategoryOpen(false) }}
+                      className={`w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
+                        categoryId === String(c.id) ? "bg-muted font-medium" : ""
+                      }`}
                     >
-                      <span className="text-lg">{c.icon}</span>
+                      <span className="text-base">{c.icon}</span>
                       <span>{c.name}</span>
-                    </SelectItem>
+                    </button>
                   ))}
                 </div>
-              </SelectContent>
-
-            </Select>
-
-
-            <p className="mt-1 text-xs text-muted-foreground">Choose a category for this transaction</p>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">Choose a category for this transaction</p>
           </div>
-
-          {localError && <div className="rounded-md bg-rose-900/40 p-2 text-sm text-rose-300">{localError}</div>}
         </div>
 
-        <DialogFooter className="flex items-center justify-end gap-3 pt-2">
+        <DialogFooter className="gap-2 pt-1">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={isLoading}>
+          <Button
+            onClick={handleCreate}
+            disabled={isLoading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
+          >
             {isLoading ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>

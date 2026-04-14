@@ -26,6 +26,7 @@ interface yearHistoryState {
 export interface DashBoardStoreState {
   isLoading: boolean;
   isSummaryLoading: boolean;
+  isRecentTransactionsLoading: boolean;
   totalIncome: number;
   totalExpense: number;
   netBalance: number;
@@ -33,7 +34,9 @@ export interface DashBoardStoreState {
   expenseByCategory: CategoryState[];
   monthHistory: monthHistoryState[];
   yearHistory: yearHistoryState[];
+  recentTransactions: any[];
   fetchSummary: (startDate: string, endDate: string) => Promise<void>;
   fetchMonthHistory: (year: number, month: number) => Promise<void>;
   fetchYearHistory: (year: number) => Promise<void>;
+  fetchRecentTransactions: () => Promise<void>;
 }

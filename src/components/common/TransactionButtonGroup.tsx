@@ -2,44 +2,38 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { TransactionModal } from "./TransactionModal"
+import { Plus } from "lucide-react"
 
 export default function TransactionButtonGroup() {
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<"income" | "expense">("income")
+  const [quickInput, setQuickInput] = useState("")
+
+  const handleQuickAdd = () => {
+    if (!quickInput.trim()) return;
+    // Mock fast expense creation
+    console.log("Quick added expense:", quickInput);
+    setQuickInput("");
+  }
 
   return (
     <>
-      <div className="flex gap-4">
+      <div className="flex items-center gap-2">
         <Button
-          variant="outline"
-          onClick={() => {
-            setType("income")
-            setOpen(true)
-          }}
+          onClick={() => setOpen(true)}
+          className="bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm"
         >
-          New income
-        </Button>
-
-        <Button
-          variant="destructive"
-          onClick={() => {
-            setType("expense")
-            setOpen(true)
-          }}
-        >
-          New expense
+          <Plus className="mr-2 h-4 w-4" /> Add Transaction
         </Button>
       </div>
 
       <TransactionModal
         open={open}
         onOpenChange={setOpen}
-        type={type}
+        type="expense"
         onSuccess={(created) => {
-          // call dashboard refresh or toast
           console.log("created", created)
-          // e.g. useDashboardStore.getState().loadSummary(...)
         }}
       />
     </>

@@ -1,68 +1,51 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
 import TransactionButtonGroup from "@/components/common/TransactionButtonGroup"
 import { useTransactionStore } from "@/store/transactionStore"
 import { useDashboardStore } from "@/store/dashboardStore"
-import { DatePickerWithRange } from "@/components/dashboard/dataPickerWithRange"
-import { DateRange } from "react-day-picker"
 import SummaryCard from "@/components/dashboard/SummaryCard"
-import { HistoryCard } from "@/components/dashboard/HistoryCard"
+import { RecentTransactionsCard } from "@/components/dashboard/RecentTransactionsCard"
+import { MonthlyReportCard } from "@/components/dashboard/MonthlyReportCard"
 
 export default function Dashboard() {
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
-
-  useEffect(() => {
-    const today = new Date();
-    setDate({
-      from: new Date(today.getFullYear(), today.getMonth(), 1),
-      to: today
-    });
-  }, []);
- 
-
   const { fetchAllCategories } = useTransactionStore()
   const { fetchSummary } = useDashboardStore()
 
-  // initial load
   useEffect(() => {
     fetchAllCategories();
     
-    if (date?.from && date?.to) {
-      fetchSummary(date.from.toISOString(), date.to.toISOString());
-    }
-  }, [fetchAllCategories, fetchSummary, date]);
+    const fetchGlobalSummary = () => {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+      fetchSummary(start.toISOString(), end.toISOString());
+    };
+    
+    fetchGlobalSummary();
+
+    window.addEventListener("transaction-added", fetchGlobalSummary);
+    return () => window.removeEventListener("transaction-added", fetchGlobalSummary);
+  }, [fetchAllCategories, fetchSummary]);
 
   return (
-    <div className="space-y-6 p-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          Hello, Rahul! 👋
-        </h1>
-
-        {/* New income / New expense buttons + modal */}
-        <TransactionButtonGroup />
-      </div>
-
-      {/* Overview */}
+    <div className="space-y-6 p-6 max-w-5xl mx-auto min-h-full pb-16">
       <section>
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl mb-4">Overview</h1>
-          <div>
-            <DatePickerWithRange date={date} setDate={setDate} />
-          </div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
+          <h2 className="text-[22px] font-bold text-[#1f2937] dark:text-gray-100">Overview</h2>
+          <TransactionButtonGroup />
         </div>
-          <SummaryCard />
+        <SummaryCard />
       </section>
 
-      {/* History */}
-      <section>
-        <h1 className="text-xl mb-4">History</h1>
-        <HistoryCard />
-      </section>
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 relative z-10">
+          <RecentTransactionsCard />
+        </div>
+        <div className="lg:col-span-1 relative z-10">
+          <MonthlyReportCard />
+        </div>
+      </div>
     </div>
   )
 }
