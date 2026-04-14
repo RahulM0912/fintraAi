@@ -1,96 +1,70 @@
-import { pool } from "@/lib/db/connection";
+import { auth } from "@clerk/nextjs/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+export const dynamic = "force-dynamic";
 
-export async function GET(req:Request) {
-  const userId = "test_user_1"; // replace with Clerk later
-  
+export async function GET(req: Request) {
+  const { userId } = await auth();
+  if (!userId) return new Response("Unauthorized", { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
-  if(!startDate || !endDate) {
-    return new Response("startDate and endDate are required", { status: 400});
+  if (!startDate || !endDate) {
+    return new Response("startDate and endDate are required", { status: 400 });
   }
 
-  try {
-    const totalResult = await pool.query(
-      `
-      SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS total_expense
-      FROM transactions
-      WHERE user_id = $1 AND date BETWEEN $2 AND $3
-      `,
-      [userId, startDate, endDate]
-    )
+  const db = createAdminClient();
 
-    const totalIncome = Number(totalResult.rows[0].total_income);
-    const totalExpense = Number(totalResult.rows[0].total_expense);
-    const netBalance = totalIncome - totalExpense;
+  const { data: transactions, error } = await db
+    .from("transactions")
+    .select("type, amount, categories(id, name, icon)")
+    .eq("user_id", userId)
+    .gte("date", startDate.split("T")[0])
+    .lte("date", endDate.split("T")[0]);
 
-    const incomeByCategoryResult = await pool.query(
-      `
-      SELECT
-        c.id AS category_id,
-        c.name,
-        c.icon,
-        SUM(t.amount) AS total_amount
-      FROM transactions t
-      JOIN categories c ON c.id = t.category_id
-      WHERE t.user_id = $1 
-      AND t.type = 'income'
-      AND t.date BETWEEN $2 AND $3
-      GROUP BY c.id, c.name, c.icon
-      ORDER BY total_amount DESC
-      `,
-      [userId, startDate, endDate]
-    );
-
-    const expenseByCategoryResult = await pool.query(
-      `
-      SELECT
-        c.id AS category_id,
-        c.name,
-        c.icon,
-        SUM(t.amount) AS total_amount
-      FROM transactions t
-      JOIN categories c ON c.id = t.category_id
-      WHERE t.user_id = $1 
-      AND t.type = 'expense'
-      AND t.date BETWEEN $2 AND $3
-      GROUP BY c.id, c.name, c.icon
-      ORDER BY total_amount DESC
-      `,
-      [userId, startDate, endDate]
-    );
-
-    const incomeByCategory = incomeByCategoryResult.rows.map((row) => ({
-      categoryId: row.category_id,
-      name: row.name,
-      icon: row.icon,
-      totalAmount: Number(row.total_amount),
-      percentage: totalIncome > 0 ? (Number(row.total_amount) / totalIncome) * 100 : 0,
-    }));
-
-    const expenseByCategory = expenseByCategoryResult.rows.map((row) => ({
-      categoryId: row.category_id,
-      name: row.name,
-      icon: row.icon,
-      totalAmount: Number(row.total_amount),
-      percentage: totalExpense > 0 ? Math.round((Number(row.total_amount) / totalExpense) * 100) : 0,
-    }));
-
-    return Response.json({
-      total: {
-        totalIncome: totalIncome,
-        totalExpense: totalExpense,
-        netBalance: netBalance,
-      },
-      incomeByCategory,
-      expenseByCategory
-    });
-  } catch (error) {
-    console.error("Error fetching summary:", error);
+  if (error) {
+    console.error("[GET /api/summary]", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 
+  const totalIncome = (transactions ?? [])
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalExpense = (transactions ?? [])
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const netBalance = totalIncome - totalExpense;
+
+  function aggregateByCategory(type: "income" | "expense") {
+    const total = type === "income" ? totalIncome : totalExpense;
+    const map = new Map<string, { id: string; name: string; icon: string; total: number }>();
+    (transactions ?? [])
+      .filter((t) => t.type === type)
+      .forEach((t) => {
+        const rawCat = t.categories as { id: string; name: string; icon: string } | { id: string; name: string; icon: string }[] | null;
+        const cat = Array.isArray(rawCat) ? rawCat[0] ?? null : rawCat;
+        if (!cat) return;
+        const existing = map.get(cat.id);
+        if (existing) existing.total += Number(t.amount);
+        else map.set(cat.id, { id: cat.id, name: cat.name, icon: cat.icon, total: Number(t.amount) });
+      });
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .map((c) => ({
+        categoryId: c.id,
+        name: c.name,
+        icon: c.icon,
+        totalAmount: c.total,
+        percentage: total > 0 ? Math.round((c.total / total) * 100) : 0,
+      }));
+  }
+
+  return Response.json({
+    total: { totalIncome, totalExpense, netBalance },
+    incomeByCategory: aggregateByCategory("income"),
+    expenseByCategory: aggregateByCategory("expense"),
+  });
 }

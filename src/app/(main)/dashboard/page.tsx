@@ -1,60 +1,52 @@
 "use client"
 
-import { useEffect } from "react"
+import React, { useEffect } from "react"
 import TransactionButtonGroup from "@/components/common/TransactionButtonGroup"
 import { useTransactionStore } from "@/store/transactionStore"
-
-// import { useDashboardStore } from "@/stores/dashboard/dashboard.store"
-
-// later you’ll import real components
-// import SummaryCards from "./components/SummaryCards"
-// import CategoryBreakdown from "./components/CategoryBreakdown"
-// import HistoryChart from "./components/HistoryChart"
+import { useDashboardStore } from "@/store/dashboardStore"
+import SummaryCard from "@/components/dashboard/SummaryCard"
+import { RecentTransactionsCard } from "@/components/dashboard/RecentTransactionsCard"
+import { MonthlyReportCard } from "@/components/dashboard/MonthlyReportCard"
 
 export default function Dashboard() {
-  // const loadSummary = useDashboardStore((s) => s.loadSummary)
-  // const loadHistory = useDashboardStore((s) => s.loadHistory)
-
   const { fetchAllCategories } = useTransactionStore()
+  const { fetchSummary } = useDashboardStore()
 
-  // initial load
   useEffect(() => {
-    // loadSummary("2026-01-01", "2026-01-28")
-    // loadHistory()
     fetchAllCategories();
-  }, [fetchAllCategories])
+    
+    const fetchGlobalSummary = () => {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+      fetchSummary(start.toISOString(), end.toISOString());
+    };
+    
+    fetchGlobalSummary();
+
+    window.addEventListener("transaction-added", fetchGlobalSummary);
+    return () => window.removeEventListener("transaction-added", fetchGlobalSummary);
+  }, [fetchAllCategories, fetchSummary]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 max-w-5xl mx-auto min-h-full pb-16">
+      <section>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
+          <h2 className="text-[22px] font-bold text-[#1f2937] dark:text-gray-100">Overview</h2>
+          <TransactionButtonGroup />
+        </div>
+        <SummaryCard />
+      </section>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          Hello, Rahul! 👋
-        </h1>
-
-        {/* New income / New expense buttons + modal */}
-        <TransactionButtonGroup />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 relative z-10">
+          <RecentTransactionsCard />
+        </div>
+        <div className="lg:col-span-1 relative z-10">
+          <MonthlyReportCard />
+        </div>
       </div>
-
-      {/* Overview */}
-      <section>
-        <h2 className="text-xl mb-4">Overview</h2>
-
-        {/* later */}
-        {/* <SummaryCards /> */}
-      </section>
-
-      {/* Category Breakdown */}
-      <section>
-        {/* <CategoryBreakdown /> */}
-      </section>
-
-      {/* History */}
-      <section>
-        {/* <HistoryChart /> */}
-      </section>
-
     </div>
   )
 }
+

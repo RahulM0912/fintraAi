@@ -1,7 +1,12 @@
-import { initDatabase } from "@/lib/db";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function GET() {
-  await initDatabase();
-
-  return Response.json({ status: "ok" });
+  try {
+    const db = createAdminClient();
+    const { error } = await db.from("users").select("id").limit(1);
+    if (error) throw error;
+    return Response.json({ status: "ok" });
+  } catch (err) {
+    return Response.json({ status: "error", message: String(err) }, { status: 500 });
+  }
 }
