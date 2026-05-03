@@ -31,16 +31,25 @@ function createSSEStream(
       try {
         await handler(send);
       } catch (err: any) {
-        console.error("[/api/chat] unhandled error:", err);
+        
+        const status = err?.status ?? err?.code;
+        const msg = String(err?.message ?? "");
+
+        const is404 = status === 404 || msg.includes("MODEL_NOT_FOUND") || msg.includes("model not found");
         const is429 =
-          err?.status === 429 ||
-          String(err?.message ?? "").includes("429") ||
-          String(err?.message ?? "").includes("quota");
+          status === 429 ||
+          msg.includes("429") ||
+          msg.includes("quota") ||
+          msg.includes("rate limit") ||
+          msg.includes("Rate limit");
+
         send({
           type: "error",
-          message: is429
-            ? "AI quota exceeded. Please try again in a few seconds or check your Gemini API plan."
-            : "Something went wrong. Please try again.",
+          message: is404
+            ? `Model not found on OpenRouter. Check the model slug in types.ts. Raw: ${msg}`
+            : is429
+            ? "AI rate limit reached. Please wait a moment and try again."
+            : `Something went wrong: ${msg || "unknown error"}`,
         });
       } finally {
         controller.close();
@@ -120,6 +129,9 @@ export async function POST(req: Request) {
   ];
 
   return createSSEStream(async (send) => {
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+
     const eventStream = fintraGraph.streamEvents(
       { messages: langchainMessages },
       {
@@ -153,8 +165,22 @@ export async function POST(req: Request) {
           if (content) send({ type: "token", content });
           break;
         }
+        case "on_chat_model_end": {
+          const usage = event.data?.output?.usage_metadata;
+          if (usage) {
+            totalInputTokens += usage.input_tokens || 0;
+            totalOutputTokens += usage.output_tokens || 0;
+          }
+          break;
+        }
       }
     }
+
+    const totalTokens = totalInputTokens + totalOutputTokens;
+    const cost = 0; // openai/gpt-oss-120b:free is $0/token
+    
+    console.log(`\n📊 [Token Usage] Input: ${totalInputTokens} | Output: ${totalOutputTokens} | Total: ${totalTokens}`);
+    console.log(`💰 [Cost] $${cost.toFixed(6)} (using ${DEFAULT_MODEL_CONFIG.modelName})\n`);
 
     send({ type: "done" });
   });

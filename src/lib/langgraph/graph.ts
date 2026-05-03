@@ -6,6 +6,7 @@ import {
 } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { financeTools } from "./tools";
@@ -19,6 +20,20 @@ const toolNode = new ToolNode(financeTools);
 
 function createModel(provider: ModelProvider, modelName: string) {
   switch (provider) {
+    case "openrouter":
+      return new ChatOpenAI({
+        model: modelName,
+        temperature: 0.1,
+        maxRetries: 1,
+        apiKey: process.env.OPENROUTER_API_KEY ?? undefined,
+        configuration: {
+          baseURL: "https://openrouter.ai/api/v1",
+          defaultHeaders: {
+            "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "https://fintra.app",
+            "X-Title": "Fintra AI",
+          },
+        },
+      });
     case "gemini":
     default:
       return new ChatGoogleGenerativeAI({

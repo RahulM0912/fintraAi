@@ -7,8 +7,8 @@ export interface ChatRequest {
   messages: ChatMessage[];
 }
 
-// Extensible for future providers: "openai" | "anthropic"
-export type ModelProvider = "gemini";
+// Supported providers
+export type ModelProvider = "gemini" | "openrouter";
 
 export interface ModelConfig {
   provider: ModelProvider;
@@ -16,6 +16,7 @@ export interface ModelConfig {
 }
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  provider: "gemini",
-  modelName: "gemini-2.5-flash",
+  provider: "openrouter",
+  // OpenRouter free-tier model (requires :free suffix for zero-credit usage)
+  modelName: "openai/gpt-oss-120b:free",
 };
