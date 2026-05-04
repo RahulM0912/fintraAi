@@ -56,7 +56,7 @@ export function RecentTransactionsCard() {
   }
 
   return (
-    <Card className="bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full relative z-0 overflow-hidden">
+    <Card className="bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full relative overflow-hidden">
       <CardContent className="p-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-[17px] font-bold text-gray-800 dark:text-gray-100 tracking-tight">Recent Transactions</h2>

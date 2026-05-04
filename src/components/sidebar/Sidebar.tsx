@@ -46,7 +46,7 @@ export function Sidebar() {
     <aside
       className={cn(
         // Base: fixed on mobile/tablet, sticky on desktop
-        "fixed inset-y-0 left-0 z-30 w-[280px] h-screen",
+        "fixed inset-y-0 left-0 z-50 w-[280px] h-screen",
         "lg:sticky lg:top-0 lg:z-auto",
         // Layout
         "flex flex-col justify-between",

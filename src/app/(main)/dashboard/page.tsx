@@ -39,10 +39,10 @@ export default function Dashboard() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative z-10">
+        <div className="lg:col-span-2">
           <RecentTransactionsCard />
         </div>
-        <div className="lg:col-span-1 relative z-10">
+        <div className="lg:col-span-1">
           <MonthlyReportCard />
         </div>
       </div>
