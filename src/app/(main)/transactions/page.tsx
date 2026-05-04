@@ -89,24 +89,35 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-4 p-6 max-w-6xl mx-auto">
+    <div className="space-y-4 p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Filter bar + Add button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <TransactionFilters
-          type={type}
-          categoryId={categoryId}
-          dateRange={dateRange}
-          onTypeChange={handleTypeChange}
-          onCategoryChange={handleCategoryChange}
-          onDateRangeChange={handleDateRangeChange}
-        />
-
+      <div className="flex flex-col gap-3">
+        {/* Mobile: button on top, full width */}
         <Button
           onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
-          className="bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm shrink-0"
+          className="sm:hidden w-full bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm"
         >
           <Plus className="mr-2 h-4 w-4" /> Add Transaction
         </Button>
+
+        {/* Filters row — button sits inline on sm+ */}
+        <div className="flex items-center justify-between gap-3">
+          <TransactionFilters
+            type={type}
+            categoryId={categoryId}
+            dateRange={dateRange}
+            onTypeChange={handleTypeChange}
+            onCategoryChange={handleCategoryChange}
+            onDateRangeChange={handleDateRangeChange}
+          />
+
+          <Button
+            onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
+            className="hidden sm:flex bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm shrink-0"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Transaction
+          </Button>
+        </div>
       </div>
 
       {/* Transaction table */}

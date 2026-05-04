@@ -31,7 +31,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto min-h-full pb-16">
       <section>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-4">
+        <div className="flex items-center justify-between mb-4 gap-4">
           <h2 className="text-[22px] font-bold text-[#1f2937] dark:text-gray-100">Overview</h2>
           <TransactionButtonGroup />
         </div>
