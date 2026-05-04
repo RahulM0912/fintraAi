@@ -18,25 +18,41 @@ import { CalendarIcon, ChevronDown, DollarSign, Search, Tag } from "lucide-react
 import { toast } from "sonner"
 import { format } from "date-fns"
 
+type ExistingTransaction = {
+  id: string
+  amount: number
+  type: "income" | "expense"
+  description: string | null
+  date: string
+  category: { id: string; name: string; icon: string }
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   type: "income" | "expense"
-  onSuccess?: (created: any) => void
+  onSuccess?: (result: any) => void
+  /** Pass to open in edit mode */
+  transaction?: ExistingTransaction | null
 }
 
-export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props) {
+export function TransactionModal({ open, onOpenChange, type, onSuccess, transaction }: Props) {
+  const isEditMode = !!transaction
+
   const [internalTxType, setInternalTxType] = useState<"income" | "expense">(type)
   const isIncome = internalTxType === "income"
 
   const {
-    isLoading,
+    isLoading: storeLoading,
     expenseCategories,
     incomeCategories,
     addTransaction,
     getIncomeCategories,
     getExpenseCategories,
   } = useTransactionStore()
+
+  const [isSaving, setIsSaving] = useState(false)
+  const isLoading = isEditMode ? isSaving : storeLoading
 
   const categories = isIncome ? incomeCategories : expenseCategories
 
@@ -49,6 +65,18 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
   const [catSearch, setCatSearch] = useState("")
   const catSearchRef = useRef<HTMLInputElement>(null)
 
+  // Seed fields when opening in edit mode
+  useEffect(() => {
+    if (open && isEditMode && transaction) {
+      setInternalTxType(transaction.type)
+      setDescription(transaction.description ?? "")
+      setAmount(transaction.amount)
+      setCategoryId(String(transaction.category.id))
+      setSelectedDate(new Date(transaction.date))
+    }
+  }, [open, isEditMode, transaction])
+
+  // Load categories whenever the modal opens or type toggles
   useEffect(() => {
     if (!open) return
     if (isIncome) {
@@ -56,11 +84,10 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     } else {
       getExpenseCategories().catch(() => {})
     }
-    // store functions handle caching internally — don't add categories arrays here
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isIncome])
 
-  // Auto-focus search when category popover opens
+  // Auto-focus category search input
   useEffect(() => {
     if (categoryOpen) {
       setCatSearch("")
@@ -68,6 +95,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     }
   }, [categoryOpen])
 
+  // Reset all fields on close
   useEffect(() => {
     if (!open) {
       setDescription("")
@@ -77,6 +105,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
       setCategoryOpen(false)
       setCalendarOpen(false)
       setCatSearch("")
+      setIsSaving(false)
     }
   }, [open])
 
@@ -86,15 +115,20 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     ? categories.filter((c) => c.name.toLowerCase().startsWith(catSearch.toLowerCase()))
     : categories
 
-  async function handleCreate() {
+  function validate() {
     if (!amount || Number(amount) <= 0) {
       toast.error("Please enter a valid amount")
-      return
+      return false
     }
     if (!categoryId) {
       toast.error("Please select a category")
-      return
+      return false
     }
+    return true
+  }
+
+  async function handleCreate() {
+    if (!validate()) return
 
     const normalizedCategory =
       typeof categoryId === "string" && /^\d+$/.test(categoryId)
@@ -118,28 +152,61 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
     }
   }
 
+  async function handleEdit() {
+    if (!validate() || !transaction) return
+
+    setIsSaving(true)
+    try {
+      const res = await fetch(`/api/transactions/${transaction.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: internalTxType,
+          amount: Number(amount),
+          categoryId,
+          description: description || null,
+          date: format(selectedDate, "yyyy-MM-dd"),
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || "Failed to update transaction")
+      }
+      toast.success("Transaction updated")
+      onOpenChange(false)
+      window.dispatchEvent(new Event("transaction-added"))
+      onSuccess?.(await res.json().catch(() => null))
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to update transaction")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl p-7 bg-white dark:bg-zinc-900">
-        <DialogHeader className="pb-1">
-          <DialogTitle className="text-2xl font-bold leading-tight">
-            Create a{" "}
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-lg rounded-2xl px-6 py-4 sm:px-8 sm:py-7 bg-white dark:bg-zinc-900 max-h-[90dvh] overflow-y-auto">
+        <DialogHeader className="pb-0 sm:pb-1">
+          <DialogTitle className="text-lg sm:text-2xl font-bold leading-tight">
+            {isEditMode ? "Edit " : "Create a "}
             <span className={isIncome ? "text-emerald-500" : "text-rose-500"}>
-              new {isIncome ? "income" : "expense"}
-            </span>{" "}
-            transaction
+              {isEditMode ? (isIncome ? "income" : "expense") : `new ${isIncome ? "income" : "expense"}`}
+            </span>
+            {" "}transaction
           </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add a transaction to your account. This will update dashboard data.
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+            {isEditMode
+              ? "Update the details below. Changes will reflect immediately."
+              : "Add a transaction to your account. This will update dashboard data."}
           </p>
         </DialogHeader>
 
-        <div className="grid gap-5 py-3">
+        <div className="grid gap-3 sm:gap-5 py-2 sm:py-3">
           {/* Type toggle */}
           <div className="flex rounded-xl border border-border overflow-hidden">
             <button
               onClick={() => { setInternalTxType("expense"); setCategoryId(null) }}
-              className={`flex-1 text-sm font-semibold py-2.5 transition-all ${
+              className={`flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 !isIncome
                   ? "bg-white dark:bg-zinc-800 text-rose-500 shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground"
@@ -149,7 +216,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
             </button>
             <button
               onClick={() => { setInternalTxType("income"); setCategoryId(null) }}
-              className={`flex-1 text-sm font-semibold py-2.5 transition-all ${
+              className={`flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 isIncome
                   ? "bg-white dark:bg-zinc-800 text-emerald-600 shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground"
@@ -160,7 +227,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
           </div>
 
           {/* Description */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Description
             </Label>
@@ -170,14 +237,14 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
               placeholder="Transaction description (optional)"
               className="rounded-xl"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground hidden sm:block">
               Keep it short — e.g. &quot;Freelance - Jan Invoice&quot;.
             </p>
           </div>
 
           {/* Amount + Date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Amount
               </Label>
@@ -196,10 +263,10 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
                   className="pl-9 rounded-xl"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Transaction amount (required)</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">Transaction amount (required)</p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Transaction Date
               </Label>
@@ -221,18 +288,18 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
                   />
                 </PopoverContent>
               </Popover>
-              <p className="text-xs text-muted-foreground">Select a date for this transaction</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">Select a date for this transaction</p>
             </div>
           </div>
 
-          {/* Category — popover list like TransactionFilters */}
-          <div className="space-y-1.5">
+          {/* Category */}
+          <div className="space-y-1">
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Category
             </Label>
             <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
               <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
+                <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 sm:py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
                   <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className={selectedCategory ? "text-foreground" : "text-muted-foreground"}>
                     {selectedCategory
@@ -243,7 +310,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
-                {/* Search */}
                 <div className="relative mb-2">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <input
@@ -273,20 +339,27 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess }: Props)
                 </div>
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">Choose a category for this transaction</p>
+            <p className="text-xs text-muted-foreground hidden sm:block">Choose a category for this transaction</p>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 pt-1">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>
+        <DialogFooter className="gap-2 pt-1 flex-row sm:flex-row">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+            className="flex-1 sm:flex-none"
+          >
             Cancel
           </Button>
           <Button
-            onClick={handleCreate}
+            onClick={isEditMode ? handleEdit : handleCreate}
             disabled={isLoading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
+            className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-6"
           >
-            {isLoading ? "Creating..." : "Create"}
+            {isLoading
+              ? isEditMode ? "Saving..." : "Creating..."
+              : isEditMode ? "Save Changes" : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>

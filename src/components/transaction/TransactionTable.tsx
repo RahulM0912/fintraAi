@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { EditTransactionModal } from "./EditTransactionModal"
+import { TransactionModal } from "@/components/common/TransactionModal"
 import { format } from "date-fns"
 
 type Transaction = {
@@ -44,7 +44,7 @@ const COLS = "grid-cols-[1.4fr_1.2fr_0.9fr_1.2fr_1fr_100px]"
 
 function StatusBadge() {
   return (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 whitespace-nowrap">
       Completed
     </span>
   )
@@ -112,15 +112,15 @@ function PaginationBar({
   }
 
   return (
-    <div className="flex items-center justify-between pt-4">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4">
+      <p className="text-xs sm:text-sm text-muted-foreground">
         Showing {start} to {end} of {total} transactions
       </p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={!hasPrev}
-          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center"
+          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -146,10 +146,65 @@ function PaginationBar({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={!hasNext}
-          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center"
+          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center transition-colors"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Mobile card skeleton ─────────────────────────────────────── */
+function MobileSkeletonCard() {
+  return (
+    <div className="p-4 border-b last:border-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
+          <div className="space-y-1.5 min-w-0">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+        <Skeleton className="h-4 w-16 shrink-0" />
+      </div>
+      <Skeleton className="h-3 w-40 mt-3" />
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-20 rounded" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <div className="flex gap-1.5">
+          <Skeleton className="h-7 w-7 rounded-md" />
+          <Skeleton className="h-7 w-7 rounded-md" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Desktop row skeleton ─────────────────────────────────────── */
+function DesktopSkeletonRow() {
+  return (
+    <div className={`hidden md:grid ${COLS} px-6 py-4 border-b last:border-0 items-center`}>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+      <Skeleton className="h-3.5 w-24" />
+      <Skeleton className="h-5 w-20 rounded" />
+      <div className="space-y-1.5">
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+      <Skeleton className="h-4 w-20 ml-auto" />
+      <div className="flex gap-1.5 justify-end">
+        <Skeleton className="h-7 w-7 rounded-md" />
+        <Skeleton className="h-7 w-7 rounded-md" />
       </div>
     </div>
   )
@@ -176,14 +231,14 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
     }
   }
 
-  // Table header — always visible
+  /* ── Desktop table header ── */
   const tableHeader = (
     <div className={`hidden md:grid ${COLS} px-6 py-3 border-b bg-muted/40`}>
       {["CATEGORY", "DESCRIPTION", "STATUS", "DATE & TIME", "AMOUNT", "ACTIONS"].map((h) => (
         <div
           key={h}
           className={`text-xs font-semibold text-muted-foreground tracking-wider uppercase ${
-            h === "AMOUNT" ? "text-right" : h === "ACTIONS" ? "text-right" : ""
+            h === "AMOUNT" || h === "ACTIONS" ? "text-right" : ""
           }`}
         >
           {h}
@@ -197,31 +252,17 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
         {tableHeader}
 
-        {/* Loading skeleton rows */}
-        {isLoading && (
-          Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className={`hidden md:grid ${COLS} px-6 py-4 border-b last:border-0 items-center`}>
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-3.5 w-28" />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              </div>
-              <Skeleton className="h-3.5 w-24" />
-              <Skeleton className="h-5 w-20 rounded" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-3.5 w-24" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-              <Skeleton className="h-4 w-20 ml-auto" />
-              <div className="flex gap-1.5 justify-end">
-                <Skeleton className="h-7 w-7 rounded-md" />
-                <Skeleton className="h-7 w-7 rounded-md" />
-              </div>
+        {/* Loading skeletons */}
+        {isLoading && Array.from({ length: 5 }).map((_, i) => (
+          <div key={i}>
+            {/* Mobile skeleton */}
+            <div className="md:hidden">
+              <MobileSkeletonCard />
             </div>
-          ))
-        )}
+            {/* Desktop skeleton */}
+            <DesktopSkeletonRow />
+          </div>
+        ))}
 
         {/* Empty state */}
         {!isLoading && transactions.length === 0 && (
@@ -238,85 +279,133 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
           const isIncome = tx.type === "income"
 
           return (
-            <div
-              key={tx.id}
-              className={`relative flex flex-col md:grid ${COLS} px-6 py-4 border-b last:border-0 items-start md:items-center gap-3 md:gap-0 hover:bg-muted/20 transition-colors`}
-            >
-              {/* Left color bar */}
+            <div key={tx.id} className="relative border-b last:border-0 hover:bg-muted/20 transition-colors">
+              {/* Income/expense accent bar */}
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-emerald-500" : "bg-rose-500"}`} />
 
-              {/* Category */}
-              <div className="flex items-center gap-3 pl-1">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${isIncome ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted dark:bg-muted/50"}`}>
-                  {tx.category.icon}
+              {/* ── Mobile card layout (< md) ── */}
+              <div className="md:hidden px-4 py-3.5 pl-5">
+                {/* Row 1: icon + category name | amount */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${isIncome ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted dark:bg-muted/50"}`}>
+                      {tx.category.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm leading-tight truncate">{tx.category.name}</p>
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{tx.type}</p>
+                    </div>
+                  </div>
+                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                    {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
+                  </span>
                 </div>
-                <div>
-                  <p className="font-medium text-sm leading-tight">{tx.category.name}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{tx.category.name}</p>
+
+                {/* Row 2: description */}
+                {tx.description && (
+                  <p className="text-xs text-muted-foreground mt-2 truncate">{tx.description}</p>
+                )}
+
+                {/* Row 3: date + badge | actions */}
+                <div className="flex items-center justify-between mt-2.5 gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge />
+                    <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 hover:bg-muted"
+                      onClick={() => setEditTx(tx)}
+                      title="Edit transaction"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      onClick={() => setDeleteTx(tx)}
+                      title="Delete transaction"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* Description */}
-              <div className="text-sm text-muted-foreground truncate pr-2">
-                {tx.description || <span className="text-muted-foreground/40 italic">—</span>}
-              </div>
+              {/* ── Desktop table row (≥ md) ── */}
+              <div className={`hidden md:grid ${COLS} px-6 py-4 items-center gap-0`}>
+                {/* Category */}
+                <div className="flex items-center gap-3 pl-1">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${isIncome ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted dark:bg-muted/50"}`}>
+                    {tx.category.icon}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm leading-tight">{tx.category.name}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{tx.category.name}</p>
+                  </div>
+                </div>
 
-              {/* Status */}
-              <div>
-                <StatusBadge />
-              </div>
+                {/* Description */}
+                <div className="text-sm text-muted-foreground truncate pr-2">
+                  {tx.description || <span className="text-muted-foreground/40 italic">—</span>}
+                </div>
 
-              {/* Date & Time */}
-              <div className="text-sm text-muted-foreground leading-tight">
-                <div>{dateStr}</div>
-                <div className="text-xs">{timeStr}</div>
-              </div>
+                {/* Status */}
+                <div><StatusBadge /></div>
 
-              {/* Amount */}
-              <div className={`font-semibold text-sm md:text-base text-right ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
-                {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
-              </div>
+                {/* Date & Time */}
+                <div className="text-sm text-muted-foreground leading-tight">
+                  <div>{dateStr}</div>
+                  <div className="text-xs">{timeStr}</div>
+                </div>
 
-              {/* Actions — always visible, right-aligned */}
-              <div className="flex items-center gap-1.5 justify-end">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 hover:bg-muted"
-                  onClick={() => setEditTx(tx)}
-                  title="Edit transaction"
-                >
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                  onClick={() => setDeleteTx(tx)}
-                  title="Delete transaction"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {/* Amount */}
+                <div className={`font-semibold text-sm text-right ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                  {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 hover:bg-muted"
+                    onClick={() => setEditTx(tx)}
+                    title="Edit transaction"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    onClick={() => setDeleteTx(tx)}
+                    title="Delete transaction"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Pagination — always rendered when data exists, persists through page changes */}
       {pagination && pagination.total > 0 && (
         <PaginationBar pagination={pagination} onPageChange={onPageChange} />
       )}
 
-      {/* Edit Modal */}
-      <EditTransactionModal
-        transaction={editTx}
+      <TransactionModal
         open={!!editTx}
         onOpenChange={(open) => !open && setEditTx(null)}
+        type={editTx?.type ?? "expense"}
+        transaction={editTx}
         onSuccess={() => { setEditTx(null); onRefresh() }}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmDialog
         open={!!deleteTx}
         onOpenChange={(open) => !open && setDeleteTx(null)}

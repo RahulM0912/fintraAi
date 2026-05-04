@@ -1,13 +1,15 @@
 "use client";
 
-import { Bell, Wallet, Sparkles } from "lucide-react";
+import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
 import { useUser } from "@clerk/nextjs";
+import { useSidebar } from "@/components/sidebar/SidebarContext";
 
 export function Header() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { toggle } = useSidebar();
 
   let title = "Dashboard";
   if (pathname.includes("transactions")) title = "Transactions";
@@ -23,28 +25,31 @@ export function Header() {
   })();
 
   return (
-    <header className="h-20 w-full flex items-center justify-between px-8 bg-transparent">
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h1>
-        {title === "Dashboard" && firstName && (
-          <span className="text-sm text-gray-400 mt-1 hidden sm:inline-block">
-            {greeting}, {firstName}
-          </span>
-        )}
+    <header className="h-16 lg:h-20 w-full flex items-center justify-between px-4 lg:px-8 bg-transparent border-b border-gray-100 dark:border-zinc-800 lg:border-b-0 sticky top-0 z-10 backdrop-blur-sm bg-gray-50/80 dark:bg-zinc-950/80">
+      <div className="flex items-center gap-3">
+        {/* Hamburger — mobile/tablet only */}
+        <button
+          onClick={toggle}
+          className="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:hover:text-gray-200 transition-colors"
+          aria-label="Toggle sidebar"
+          aria-expanded={false}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-gray-100">
+            {title}
+          </h1>
+          {title === "Dashboard" && firstName && (
+            <span className="text-sm text-gray-400 hidden sm:inline-block">
+              {greeting}, {firstName}
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 sm:gap-6">
-        {/* <button className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 transition-colors">
-          <Bell className="h-5 w-5" />
-        </button>
-        <button className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 transition-colors">
-          <Wallet className="h-5 w-5" />
-        </button> */}
-        {/* <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-100/50 dark:border-indigo-900/50 shadow-sm">
-          <Sparkles className="h-4 w-4" /> Ask AI
-        </button> */}
+      <div className="flex items-center gap-3 sm:gap-6">
         <ThemeToggle />
       </div>
     </header>
