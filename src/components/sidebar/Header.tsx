@@ -30,7 +30,7 @@ export function Header() {
         {/* Hamburger — mobile/tablet only */}
         <button
           onClick={toggle}
-          className="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:hover:text-gray-200 transition-colors"
+          className="cursor-pointer lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:hover:text-gray-200 transition-colors"
           aria-label="Toggle sidebar"
           aria-expanded={false}
         >

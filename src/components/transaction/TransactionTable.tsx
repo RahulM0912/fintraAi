@@ -281,7 +281,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
           return (
             <div key={tx.id} className="relative border-b last:border-0 hover:bg-muted/20 transition-colors">
               {/* Income/expense accent bar */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-emerald-500" : "bg-rose-500"}`} />
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-[#16a34a]" : "bg-[#dc2626]"}`} />
 
               {/* ── Mobile card layout (< md) ── */}
               <div className="md:hidden px-4 py-3.5 pl-5">
@@ -296,7 +296,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                       <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{tx.type}</p>
                     </div>
                   </div>
-                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-[#16a34a]" : "text-[#dc2626]"}`}>
                     {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
                   </span>
                 </div>
@@ -363,7 +363,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                 </div>
 
                 {/* Amount */}
-                <div className={`font-semibold text-sm text-right ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                <div className={`font-semibold text-sm text-right ${isIncome ? "text-[#16a34a]" : "text-[#dc2626]"}`}>
                   {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
                 </div>
 

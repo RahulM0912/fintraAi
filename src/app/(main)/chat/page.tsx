@@ -327,7 +327,7 @@ export default function ChatPage() {
                 key={idx}
                 onClick={() => handleSend(prompt)}
                 disabled={isLoading}
-                className="flex items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50"
+                className="cursor-pointer flex items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <div>

@@ -73,7 +73,7 @@ export function RecentTransactionsCard() {
               <div key={t.id} className="relative flex items-center justify-between group">
                 <div className="flex items-center gap-4 relative w-full overflow-hidden mt-1 mb-1">
                   {/* Colored Line */}
-                  <div className={`absolute -left-0 top-1 bottom-1 w-1 rounded-full ${t.type === 'expense' ? 'bg-[#b62436]' : 'bg-[#1b8040]'}`} />
+                  <div className={`absolute -left-0 top-1 bottom-1 w-1 rounded-full ${t.type === 'expense' ? 'bg-[#dc2626]' : 'bg-[#16a34a]'}`} />
                   
                   {/* Icon Box */}
                   <div className="ml-5 h-10 w-10 shrink-0 bg-gray-100/80 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-gray-500 text-lg">
@@ -91,7 +91,7 @@ export function RecentTransactionsCard() {
                     </p>
                   </div>
                 </div>
-                <div className={`font-bold text-[14px] tracking-tight shrink-0 flex items-center gap-0.5 whitespace-nowrap ml-4 ${t.type === 'expense' ? 'text-[#b62436]' : 'text-[#1b8040]'}`}>
+                <div className={`font-bold text-[14px] tracking-tight shrink-0 flex items-center gap-0.5 whitespace-nowrap ml-4 ${t.type === 'expense' ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>
                   <span>{t.type === 'expense' ? '-' : '+'}</span>
                   <span>₹{(t.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
