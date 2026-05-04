@@ -206,7 +206,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           <div className="flex rounded-xl border border-border overflow-hidden">
             <button
               onClick={() => { setInternalTxType("expense"); setCategoryId(null) }}
-              className={`flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 !isIncome
                   ? "bg-white dark:bg-zinc-800 text-rose-500 shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground"
@@ -216,7 +216,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
             </button>
             <button
               onClick={() => { setInternalTxType("income"); setCategoryId(null) }}
-              className={`flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 isIncome
                   ? "bg-white dark:bg-zinc-800 text-emerald-600 shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground"
@@ -272,7 +272,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               </Label>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
+                  <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
                     <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span>{format(selectedDate, "MM/dd/yyyy")}</span>
                   </button>
@@ -299,7 +299,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
             </Label>
             <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
               <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 sm:py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
+                <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 sm:py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
                   <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className={selectedCategory ? "text-foreground" : "text-muted-foreground"}>
                     {selectedCategory
@@ -328,7 +328,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                     <button
                       key={String(c.id)}
                       onClick={() => { setCategoryId(String(c.id)); setCategoryOpen(false) }}
-                      className={`w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
+                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
                         categoryId === String(c.id) ? "bg-muted font-medium" : ""
                       }`}
                     >

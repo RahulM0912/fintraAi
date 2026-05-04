@@ -216,7 +216,7 @@ export function AiAssistant() {
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Open AI assistant"
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300"
+          className="cursor-pointer fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300"
         >
           <MessageSquare className="h-6 w-6" />
         </button>
@@ -226,7 +226,7 @@ export function AiAssistant() {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/20"
+            className="cursor-pointer fixed inset-0 z-40 bg-black/20"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />

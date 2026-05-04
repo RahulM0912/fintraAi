@@ -96,8 +96,8 @@ export default function SummaryCard() {
         <CardContent className="p-6 flex flex-col h-full justify-center">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ArrowDownRight className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-              <h3 className="text-[11px] font-bold text-emerald-600 dark:text-emerald-500 tracking-wider uppercase">Total Income</h3>
+              <ArrowDownRight className="h-4 w-4 text-[#16a34a]" />
+              <h3 className="text-[11px] font-bold text-[#16a34a] tracking-wider uppercase">Total Income</h3>
             </div>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">₹{incomeFormatted}</p>
           </div>
@@ -109,8 +109,8 @@ export default function SummaryCard() {
         <CardContent className="p-6 flex flex-col h-full justify-center">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ArrowUpRight className="h-4 w-4 text-red-600 dark:text-red-500" />
-              <h3 className="text-[11px] font-bold text-red-600 dark:text-red-500 tracking-wider uppercase">Total Expenses</h3>
+              <ArrowUpRight className="h-4 w-4 text-[#dc2626]" />
+              <h3 className="text-[11px] font-bold text-[#dc2626] tracking-wider uppercase">Total Expenses</h3>
             </div>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">₹{expenseFormatted}</p>
           </div>

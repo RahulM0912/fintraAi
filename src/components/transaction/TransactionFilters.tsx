@@ -106,7 +106,7 @@ function MonthRangePicker({
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => setViewYear((y) => y - 1)}
-          className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
+          className="cursor-pointer h-7 w-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors"
           aria-label="Previous year"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -115,7 +115,7 @@ function MonthRangePicker({
         <button
           onClick={() => setViewYear((y) => y + 1)}
           disabled={viewYear >= now.getFullYear()}
-          className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-30"
+          className="cursor-pointer h-7 w-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Next year"
         >
           <ChevronRight className="h-4 w-4" />
@@ -140,7 +140,7 @@ function MonthRangePicker({
               onClick={() => handleClick(p)}
               onMouseEnter={() => anchor && setHover(p)}
               className={cn(
-                "py-2.5 text-sm font-medium transition-all duration-100",
+                "cursor-pointer py-2.5 text-sm font-medium transition-all duration-100",
                 // End-caps get rounded corners; in-range cells get square sides
                 state === "start"    && "rounded-l-lg bg-primary text-primary-foreground",
                 state === "end"      && "rounded-r-lg bg-primary text-primary-foreground",
@@ -271,7 +271,7 @@ export function TransactionFilters({
             {!catSearch && (
               <button
                 onClick={() => { onCategoryChange(""); setCategoryOpen(false) }}
-                className={`w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${!categoryId ? "bg-muted font-medium" : ""}`}
+                className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${!categoryId ? "bg-muted font-medium" : ""}`}
               >
                 All Categories
               </button>
@@ -289,7 +289,7 @@ export function TransactionFilters({
                     <button
                       key={cat.id}
                       onClick={() => { onCategoryChange(cat.id); setCategoryOpen(false) }}
-                      className={`w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2 ${categoryId === cat.id ? "bg-muted font-medium" : ""}`}
+                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2 ${categoryId === cat.id ? "bg-muted font-medium" : ""}`}
                     >
                       <span>{cat.icon}</span>
                       <span>{cat.name}</span>
@@ -315,7 +315,7 @@ export function TransactionFilters({
             <button
               key={t}
               onClick={() => { onTypeChange(t); setTypeOpen(false) }}
-              className={`w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${type === t ? "bg-muted font-medium" : ""}`}
+              className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${type === t ? "bg-muted font-medium" : ""}`}
             >
               {t === "" ? "All Types" : t === "income" ? "Income" : "Expense"}
             </button>

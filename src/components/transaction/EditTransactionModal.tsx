@@ -127,13 +127,13 @@ export function EditTransactionModal({ transaction, open, onOpenChange, onSucces
           <div className="flex bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl w-full sm:w-64">
             <button
               onClick={() => { setInternalType("expense"); setCategoryId("") }}
-              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${!isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-rose-600" : "text-gray-500 hover:text-gray-900"}`}
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${!isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-rose-600" : "text-gray-500 hover:text-gray-900"}`}
             >
               Expense
             </button>
             <button
               onClick={() => { setInternalType("income"); setCategoryId("") }}
-              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600" : "text-gray-500 hover:text-gray-900"}`}
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600" : "text-gray-500 hover:text-gray-900"}`}
             >
               Income
             </button>

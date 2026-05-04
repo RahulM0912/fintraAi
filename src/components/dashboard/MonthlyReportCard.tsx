@@ -140,7 +140,7 @@ export function MonthlyReportCard() {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-[17px] font-bold text-gray-800 dark:text-gray-100 tracking-tight">Monthly Report</h2>
           <div className="flex items-center gap-1">
-            <button onClick={handlePrevMonth} className="p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            <button onClick={handlePrevMonth} className="cursor-pointer p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
 
@@ -150,7 +150,7 @@ export function MonthlyReportCard() {
               if (o) setPickerYear(currentDate.getFullYear())
             }}>
               <PopoverTrigger asChild>
-                <button className="text-[10px] font-bold tracking-widest text-gray-400 uppercase w-20 text-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded px-1 py-0.5 hover:bg-muted">
+                <button className="cursor-pointer text-[10px] font-bold tracking-widest text-gray-400 uppercase w-20 text-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded px-1 py-0.5 hover:bg-muted">
                   {mounted ? format(currentDate, 'MMM yyyy') : '--'}
                 </button>
               </PopoverTrigger>
@@ -159,14 +159,14 @@ export function MonthlyReportCard() {
                 <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setPickerYear((y) => y - 1)}
-                    className="p-1 rounded hover:bg-muted transition-colors"
+                    className="cursor-pointer p-1 rounded hover:bg-muted transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <span className="text-sm font-semibold">{pickerYear}</span>
                   <button
                     onClick={() => setPickerYear((y) => y + 1)}
-                    className="p-1 rounded hover:bg-muted transition-colors"
+                    className="cursor-pointer p-1 rounded hover:bg-muted transition-colors"
                   >
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </button>
@@ -185,7 +185,7 @@ export function MonthlyReportCard() {
                           setPickerOpen(false)
                         }}
                         className={cn(
-                          "text-xs py-1.5 rounded-md font-medium transition-colors",
+                          "cursor-pointer text-xs py-1.5 rounded-md font-medium transition-colors",
                           isActive
                             ? "bg-primary text-primary-foreground"
                             : "hover:bg-muted text-foreground"
@@ -199,7 +199,7 @@ export function MonthlyReportCard() {
               </PopoverContent>
             </Popover>
 
-            <button onClick={handleNextMonth} className="p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            <button onClick={handleNextMonth} className="cursor-pointer p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -207,15 +207,16 @@ export function MonthlyReportCard() {
 
         <div className="grid grid-cols-2 gap-4 mb-2">
           <div className="flex flex-col items-center">
-            <h3 className="text-[9px] font-bold text-[#f87171] uppercase tracking-[0.2em] mb-1">Expenses</h3>
+            <h3 className="text-[9px] font-bold text-[#dc2626]/70 uppercase tracking-[0.2em] mb-1">Expenses</h3>
             <span className="text-xl font-bold text-[#dc2626] tracking-tight mb-4">- ₹{expenseFormatted}</span>
             
-            <div 
+            <div
               className={cn(
-                "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full",
+                "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full outline-none [&_svg]:outline-none",
                 selectedChart === 'expense' ? "shadow-[0_0_20px_rgba(79,70,229,0.3)] bg-indigo-50/10 dark:bg-indigo-900/10 scale-110" : "scale-100 opacity-90 hover:scale-105"
               )}
               onClick={() => setSelectedChart('expense')}
+              tabIndex={-1}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -246,15 +247,16 @@ export function MonthlyReportCard() {
           </div>
           
           <div className="flex flex-col items-center">
-            <h3 className="text-[9px] font-bold text-[#1b8040]/80 uppercase tracking-[0.2em] mb-1">Income</h3>
-            <span className="text-xl font-bold text-[#1b8040] tracking-tight mb-4">₹{incomeFormatted}</span>
+            <h3 className="text-[9px] font-bold text-[#16a34a]/70 uppercase tracking-[0.2em] mb-1">Income</h3>
+            <span className="text-xl font-bold text-[#16a34a] tracking-tight mb-4">₹{incomeFormatted}</span>
             
-            <div 
+            <div
               className={cn(
-                "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full",
+                "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full outline-none [&_svg]:outline-none",
                 selectedChart === 'income' ? "shadow-[0_0_20px_rgba(22,163,74,0.35)] bg-emerald-50/10 dark:bg-emerald-900/10 scale-110" : "scale-100 opacity-90 hover:scale-105"
               )}
               onClick={() => setSelectedChart('income')}
+              tabIndex={-1}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>

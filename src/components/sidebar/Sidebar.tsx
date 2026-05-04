@@ -46,7 +46,7 @@ export function Sidebar() {
     <aside
       className={cn(
         // Base: fixed on mobile/tablet, sticky on desktop
-        "fixed inset-y-0 left-0 z-30 w-[280px] h-screen",
+        "fixed inset-y-0 left-0 z-50 w-[280px] h-screen",
         "lg:sticky lg:top-0 lg:z-auto",
         // Layout
         "flex flex-col justify-between",
@@ -61,7 +61,7 @@ export function Sidebar() {
       {/* Close button — mobile/tablet only */}
       <button
         onClick={close}
-        className="absolute top-4 right-4 lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:hover:text-gray-200 transition-colors"
+        className="cursor-pointer absolute top-4 right-4 lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:hover:text-gray-200 transition-colors"
         aria-label="Close sidebar"
       >
         <X className="h-5 w-5" />
