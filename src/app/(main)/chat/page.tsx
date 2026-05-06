@@ -10,7 +10,7 @@ import {
   PieChart,
   TrendingUp,
   Search,
-  Trash2,
+  CheckCircle2,
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,10 +23,18 @@ interface Message {
   isStreaming?: boolean;
 }
 
+interface ActivityItem {
+  id: string;
+  label: string;
+  status: "active" | "done";
+}
+
 type SSEEvent =
   | { type: "token"; content: string }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
+  | { type: "status"; step: string; label: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -112,7 +120,12 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
+  const [lastQueryUsage, setLastQueryUsage] = useState<{
+    inputTokens: number;
+    outputTokens: number;
+    cost: number;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -120,15 +133,43 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, toolStatus]);
+  }, [messages, activityLog]);
 
   const clearChat = () => {
     abortRef.current?.abort();
     setMessages([WELCOME_MESSAGE]);
     setInput("");
     setIsLoading(false);
-    setToolStatus(null);
+    setActivityLog([]);
+    setLastQueryUsage(null);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "48px";
+    }
   };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // Auto-grow up to max-height, then scroll
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
+  // Stable upsert — only uses the state setter (stable ref), no deps needed
+  const upsertActivity = useCallback(
+    (id: string, label: string, status: "active" | "done") => {
+      setActivityLog((prev) => {
+        const idx = prev.findIndex((item) => item.id === id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { id, label, status };
+          return next;
+        }
+        return [...prev, { id, label, status }];
+      });
+    },
+    []
+  );
 
   const handleSend = useCallback(
     async (text?: string) => {
@@ -142,7 +183,11 @@ export default function ChatPage() {
       setMessages(updatedMessages);
       setInput("");
       setIsLoading(true);
-      setToolStatus(null);
+      setActivityLog([]);
+
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "48px";
+      }
 
       const apiMessages = updatedMessages
         .filter((m) => !m.isStreaming)
@@ -197,23 +242,50 @@ export default function ChatPage() {
             }
 
             if (event.type === "token") {
+              // First token — mark all pending activity steps as done
+              if (!streamedContent) {
+                setActivityLog((prev) =>
+                  prev.map((item) => ({ ...item, status: "done" as const }))
+                );
+              }
               streamedContent += event.content;
               setMessages((prev) => [
                 ...prev.slice(0, -1),
                 { role: "ai", content: streamedContent, isStreaming: true },
               ]);
+            } else if (event.type === "status") {
+              upsertActivity(event.step, event.label, "active");
             } else if (event.type === "tool_start") {
-              setToolStatus(
-                TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`
+              // Agent decided to use a tool — thinking phase is done
+              setActivityLog((prev) =>
+                prev.map((item) =>
+                  item.id === "thinking" ? { ...item, status: "done" } : item
+                )
               );
+              const label =
+                TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`;
+              upsertActivity(event.tool, label, "active");
               if (MUTATING_TOOLS.has(event.tool)) mutationOccurred = true;
             } else if (event.type === "tool_end") {
-              setToolStatus(null);
+              setActivityLog((prev) =>
+                prev.map((item) =>
+                  item.id === event.tool
+                    ? { ...item, status: "done" }
+                    : item
+                )
+              );
+            } else if (event.type === "usage") {
+              setLastQueryUsage({
+                inputTokens: event.inputTokens,
+                outputTokens: event.outputTokens,
+                cost: event.cost,
+              });
             } else if (event.type === "done") {
               setMessages((prev) => [
                 ...prev.slice(0, -1),
                 { role: "ai", content: streamedContent, isStreaming: false },
               ]);
+              setActivityLog([]);
               if (mutationOccurred) {
                 window.dispatchEvent(new Event("transaction-added"));
               }
@@ -238,10 +310,10 @@ export default function ChatPage() {
         ]);
       } finally {
         setIsLoading(false);
-        setToolStatus(null);
+        setActivityLog([]);
       }
     },
-    [input, isLoading, messages]
+    [input, isLoading, messages, upsertActivity]
   );
 
   const showSuggestions = messages.length <= 1;
@@ -288,28 +360,54 @@ export default function ChatPage() {
                 {msg.role === "user" ? "U" : "✨"}
               </div>
               <div
-                className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${
+                className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
                     ? "rounded-tr-sm bg-primary text-primary-foreground"
                     : "rounded-tl-sm bg-muted"
                 }`}
               >
-                {msg.content || (
-                  msg.isStreaming ? (
-                    <Loader2 className="h-4 w-4 animate-spin opacity-60" />
-                  ) : null
-                )}
+                {/* Live activity log inside the streaming AI bubble */}
+                {msg.role === "ai" &&
+                  msg.isStreaming &&
+                  activityLog.length > 0 && (
+                    <div
+                      className={`flex flex-col gap-2 ${
+                        msg.content ? "mb-3 border-b border-border pb-3" : ""
+                      }`}
+                    >
+                      {activityLog.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          {item.status === "active" ? (
+                            <Loader2 className="h-3 w-3 shrink-0 animate-spin text-indigo-500" />
+                          ) : (
+                            <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                          )}
+                          <span
+                            className={
+                              item.status === "done"
+                                ? "opacity-60"
+                                : "font-medium"
+                            }
+                          >
+                            {item.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                {/* Message text or initial spinner */}
+                {msg.content ? (
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                ) : msg.isStreaming && activityLog.length === 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin opacity-60" />
+                ) : null}
               </div>
             </div>
           ))}
-
-          {/* Tool status indicator */}
-          {toolStatus && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {toolStatus}
-            </div>
-          )}
 
           <div ref={messagesEndRef} />
         </div>
@@ -318,26 +416,28 @@ export default function ChatPage() {
       {/* Suggestion chips — only shown when chat is fresh */}
       {showSuggestions && (
         <div className="border-t bg-muted/20 px-6 py-4">
-          <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Try asking
           </p>
           <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2 sm:grid-cols-3">
-            {SUGGESTIONS.map(({ label, prompt, icon: Icon, description }, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(prompt)}
-                disabled={isLoading}
-                className="cursor-pointer flex items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div>
-                  <div className="font-medium">{label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {description}
+            {SUGGESTIONS.map(
+              ({ label, prompt, icon: Icon, description }, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(prompt)}
+                  disabled={isLoading}
+                  className="flex cursor-pointer items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <div className="font-medium">{label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {description}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            )}
           </div>
         </div>
       )}
@@ -348,7 +448,7 @@ export default function ChatPage() {
           <Textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -356,7 +456,7 @@ export default function ChatPage() {
               }
             }}
             placeholder="Ask me anything about your finances... (Enter to send, Shift+Enter for new line)"
-            className="min-h-[48px] max-h-[120px] resize-none rounded-xl bg-muted/50 focus-visible:ring-1"
+            className="min-h-[48px] max-h-[160px] resize-none overflow-y-auto rounded-xl bg-muted/50 focus-visible:ring-1"
             disabled={isLoading}
             rows={1}
           />
@@ -374,9 +474,24 @@ export default function ChatPage() {
             )}
           </Button>
         </div>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          AI can make mistakes. Verify important financial data.
-        </p>
+        <div className="mt-2 flex items-center justify-between">
+          {lastQueryUsage ? (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {(
+                lastQueryUsage.inputTokens + lastQueryUsage.outputTokens
+              ).toLocaleString()}{" "}
+              tokens
+              {lastQueryUsage.cost > 0
+                ? ` · $${lastQueryUsage.cost.toFixed(5)}`
+                : ""}
+            </span>
+          ) : (
+            <span />
+          )}
+          <p className="text-xs text-muted-foreground">
+            AI can make mistakes. Verify important financial data.
+          </p>
+        </div>
       </div>
     </div>
   );

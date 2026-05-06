@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import { fintraGraph, buildSystemPrompt } from "@/lib/langgraph/graph";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { DEFAULT_MODEL_CONFIG } from "@/lib/langgraph/types";
+import { DEFAULT_MODEL_CONFIG, calculateCost } from "@/lib/langgraph/types";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,8 @@ type SSEEvent =
   | { type: "token"; content: string }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
+  | { type: "status"; step: string; label: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -148,6 +150,13 @@ export async function POST(req: Request) {
 
     for await (const event of eventStream) {
       switch (event.event) {
+        case "on_chain_start": {
+          const node = event.metadata?.langgraph_node as string | undefined;
+          if (node === "agent") {
+            send({ type: "status", step: "thinking", label: "Thinking..." });
+          }
+          break;
+        }
         case "on_tool_start": {
           send({ type: "tool_start", tool: event.name });
           break;
@@ -157,8 +166,10 @@ export async function POST(req: Request) {
           break;
         }
         case "on_chat_model_stream": {
-          // Only stream tokens from the formatter node (final formatted response)
-          if (event.metadata?.langgraph_node !== "formatter") break;
+          // Only stream tokens from the agent's final response turn.
+          // Tool-calling turns have empty content (tool call is in additional_kwargs),
+          // so the `if (content)` guard below naturally suppresses them.
+          if (event.metadata?.langgraph_node !== "agent") break;
           const chunk = event.data?.chunk;
           const content =
             typeof chunk?.content === "string" ? chunk.content : "";
@@ -177,11 +188,12 @@ export async function POST(req: Request) {
     }
 
     const totalTokens = totalInputTokens + totalOutputTokens;
-    const cost = 0; // openai/gpt-oss-120b:free is $0/token
-    
+    const cost = calculateCost(DEFAULT_MODEL_CONFIG.modelName, totalInputTokens, totalOutputTokens);
+
     console.log(`\n📊 [Token Usage] Input: ${totalInputTokens} | Output: ${totalOutputTokens} | Total: ${totalTokens}`);
     console.log(`💰 [Cost] $${cost.toFixed(6)} (using ${DEFAULT_MODEL_CONFIG.modelName})\n`);
 
+    send({ type: "usage", inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cost });
     send({ type: "done" });
   });
 }
