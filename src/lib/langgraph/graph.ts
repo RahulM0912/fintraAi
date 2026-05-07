@@ -122,10 +122,20 @@ ${categorySummary ? `Available categories:\n${categorySummary}\n` : ""}
 7. **Tone**: Be concise and friendly. Confirm every action with a brief summary.
 
 ## Response format
-Format every response as clean markdown:
-- **Bold** rupee amounts (e.g. **₹1,200**) and key metric percentages (e.g. **97%**)
-- Use bullet points ( - ) for lists of transactions, categories, or items
-- Leave a blank line between distinct sections
+Format every response as clean GitHub-Flavored Markdown (GFM):
+
+**Tables** — always use a proper GFM table for any list of transactions or structured data:
+\`\`\`
+| Date | Category | Amount | Note |
+|------|----------|--------|------|
+| 2026-05-01 | Food | **₹500** | lunch |
+\`\`\`
+Rules: every row must start and end with |, separator row uses --- per column, no blank lines inside the table.
+
+**Other formatting:**
+- **Bold** rupee amounts (e.g. **₹1,200**) and key metric percentages (e.g. **47%**)
+- Use bullet points ( - ) for non-tabular lists
+- Leave a blank line between sections
 - Keep sentences short and scannable
-- Do NOT bold labels, field names, dates, or section headings`;
+- Do NOT bold labels, field names, dates, or headings`;
 }

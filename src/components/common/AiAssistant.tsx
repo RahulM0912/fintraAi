@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,8 +11,10 @@ import {
   PieChart,
   TrendingUp,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { MarkdownContent } from "@/components/common/MarkdownContent";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,12 +22,21 @@ interface Message {
   role: "user" | "ai";
   content: string;
   isStreaming?: boolean;
+  toolsUsed?: string[];
+}
+
+interface ActivityItem {
+  id: string;
+  label: string;
+  status: "active" | "done";
 }
 
 type SSEEvent =
   | { type: "token"; content: string }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
+  | { type: "status"; step: string; label: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -70,7 +80,7 @@ export function AiAssistant() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,7 +89,22 @@ export function AiAssistant() {
   // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, toolStatus]);
+  }, [messages, activityLog]);
+
+  const upsertActivity = useCallback(
+    (id: string, label: string, status: "active" | "done") => {
+      setActivityLog((prev) => {
+        const idx = prev.findIndex((item) => item.id === id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { id, label, status };
+          return next;
+        }
+        return [...prev, { id, label, status }];
+      });
+    },
+    []
+  );
 
   // Focus input when panel opens
   useEffect(() => {
@@ -101,7 +126,8 @@ export function AiAssistant() {
       setMessages(updatedMessages);
       setInput("");
       setIsLoading(true);
-      setToolStatus(null);
+      // Seed "Thinking…" immediately — don't wait for the first SSE round-trip
+      setActivityLog([{ id: "thinking", label: "Thinking...", status: "active" }]);
 
       // Build API payload: convert our format → {role, content} for the API
       const apiMessages = updatedMessages
@@ -119,6 +145,7 @@ export function AiAssistant() {
 
       let streamedContent = "";
       let mutationOccurred = false;
+      const toolsUsed: string[] = [];
 
       const abort = new AbortController();
       abortRef.current = abort;
@@ -160,24 +187,53 @@ export function AiAssistant() {
             }
 
             if (event.type === "token") {
+              // First token — mark all pending activity steps as done
+              if (!streamedContent) {
+                setActivityLog((prev) =>
+                  prev.map((item) => ({ ...item, status: "done" as const }))
+                );
+              }
               streamedContent += event.content;
               setMessages((prev) => [
                 ...prev.slice(0, -1),
                 { role: "ai", content: streamedContent, isStreaming: true },
               ]);
+            } else if (event.type === "status") {
+              upsertActivity(event.step, event.label, "active");
             } else if (event.type === "tool_start") {
-              setToolStatus(
-                TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`
+              // Agent decided to use a tool — thinking phase is done
+              setActivityLog((prev) =>
+                prev.map((item) =>
+                  item.id === "thinking" ? { ...item, status: "done" } : item
+                )
               );
+              const label =
+                TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`;
+              upsertActivity(event.tool, label, "active");
+              if (!toolsUsed.includes(event.tool)) toolsUsed.push(event.tool);
               if (MUTATING_TOOLS.has(event.tool)) mutationOccurred = true;
             } else if (event.type === "tool_end") {
-              setToolStatus(null);
+              setActivityLog((prev) =>
+                prev.map((item) =>
+                  item.id === event.tool
+                    ? { ...item, status: "done" }
+                    : item
+                )
+              );
+            } else if (event.type === "usage") {
+              // We don't surface cost in the assistant panel, just absorb it
             } else if (event.type === "done") {
-              // Finalize the streaming message
+              // Finalize the streaming message with the tools-used snapshot
               setMessages((prev) => [
                 ...prev.slice(0, -1),
-                { role: "ai", content: streamedContent, isStreaming: false },
+                {
+                  role: "ai",
+                  content: streamedContent,
+                  isStreaming: false,
+                  toolsUsed: toolsUsed.length > 0 ? [...toolsUsed] : undefined,
+                },
               ]);
+              setActivityLog([]);
               // Notify dashboard to refresh if data was mutated
               if (mutationOccurred) {
                 window.dispatchEvent(new Event("transaction-added"));
@@ -203,10 +259,10 @@ export function AiAssistant() {
         ]);
       } finally {
         setIsLoading(false);
-        setToolStatus(null);
+        setActivityLog([]);
       }
     },
-    [input, isLoading, messages]
+    [input, isLoading, messages, upsertActivity]
   );
 
   return (
@@ -272,42 +328,82 @@ export function AiAssistant() {
                     {msg.role === "user" ? "U" : "✨"}
                   </div>
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                       msg.role === "user"
                         ? "rounded-tr-sm bg-primary text-primary-foreground whitespace-pre-wrap"
                         : "rounded-tl-sm bg-muted"
                     }`}
                   >
+                    {/* Live activity log inside the streaming AI bubble */}
+                    {msg.role === "ai" &&
+                      msg.isStreaming &&
+                      activityLog.length > 0 && (
+                        <div
+                          className={`rounded-md border border-border/60 bg-background/40 p-2 ${
+                            msg.content ? "mb-2" : ""
+                          }`}
+                        >
+                          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-indigo-500" />
+                            Working on it
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {activityLog.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-1.5 text-xs"
+                              >
+                                {item.status === "active" ? (
+                                  <Loader2 className="h-3 w-3 shrink-0 animate-spin text-indigo-500" />
+                                ) : (
+                                  <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                                )}
+                                <span
+                                  className={
+                                    item.status === "done"
+                                      ? "text-muted-foreground line-through decoration-muted-foreground/40"
+                                      : "font-medium text-foreground/90"
+                                  }
+                                >
+                                  {item.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                     {msg.content ? (
                       msg.role === "ai" ? (
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-                            ul: ({ children }) => <ul className="mb-1 ml-4 list-disc space-y-0.5">{children}</ul>,
-                            ol: ({ children }) => <ol className="mb-1 ml-4 list-decimal space-y-0.5">{children}</ol>,
-                            li: ({ children }) => <li>{children}</li>,
-                            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      ) : msg.content
-                    ) : (
-                      msg.isStreaming ? (
-                        <Loader2 className="h-4 w-4 animate-spin opacity-60" />
-                      ) : null
-                    )}
+                        <MarkdownContent content={msg.content} />
+                      ) : (
+                        msg.content
+                      )
+                    ) : msg.isStreaming && activityLog.length === 0 ? (
+                      <Loader2 className="h-4 w-4 animate-spin opacity-60" />
+                    ) : null}
+
+                    {/* Tools-used footer on completed AI messages */}
+                    {/* {msg.role === "ai" &&
+                      !msg.isStreaming &&
+                      msg.toolsUsed &&
+                      msg.toolsUsed.length > 0 && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-border/50 pt-1.5 text-[10px] text-muted-foreground">
+                          <CheckCircle2 className="h-2.5 w-2.5 text-green-500/80" />
+                          <span className="font-medium">Used:</span>
+                          {msg.toolsUsed.map((tool) => (
+                            <span
+                              key={tool}
+                              className="rounded-full bg-background/60 px-1.5 py-0.5 font-mono"
+                            >
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                      )} */}
                   </div>
                 </div>
               ))}
-
-              {/* Tool execution status */}
-              {toolStatus && (
-                <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {toolStatus}
-                </div>
-              )}
 
               <div ref={messagesEndRef} />
             </div>

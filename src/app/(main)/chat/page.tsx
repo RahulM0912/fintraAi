@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { MarkdownContent } from "@/components/common/MarkdownContent";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ interface Message {
   role: "user" | "ai";
   content: string;
   isStreaming?: boolean;
+  toolsUsed?: string[]; // tools the AI invoked while answering this message
 }
 
 interface ActivityItem {
@@ -114,6 +116,7 @@ Here's what I can do for you:
 What would you like to do?`,
 };
 
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
@@ -183,7 +186,8 @@ export default function ChatPage() {
       setMessages(updatedMessages);
       setInput("");
       setIsLoading(true);
-      setActivityLog([]);
+      // Seed "Thinking…" immediately — don't wait for the first SSE round-trip
+      setActivityLog([{ id: "thinking", label: "Thinking...", status: "active" }]);
 
       if (textareaRef.current) {
         textareaRef.current.style.height = "48px";
@@ -203,6 +207,7 @@ export default function ChatPage() {
 
       let streamedContent = "";
       let mutationOccurred = false;
+      const toolsUsed: string[] = [];
 
       const abort = new AbortController();
       abortRef.current = abort;
@@ -265,6 +270,7 @@ export default function ChatPage() {
               const label =
                 TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`;
               upsertActivity(event.tool, label, "active");
+              if (!toolsUsed.includes(event.tool)) toolsUsed.push(event.tool);
               if (MUTATING_TOOLS.has(event.tool)) mutationOccurred = true;
             } else if (event.type === "tool_end") {
               setActivityLog((prev) =>
@@ -283,7 +289,12 @@ export default function ChatPage() {
             } else if (event.type === "done") {
               setMessages((prev) => [
                 ...prev.slice(0, -1),
-                { role: "ai", content: streamedContent, isStreaming: false },
+                {
+                  role: "ai",
+                  content: streamedContent,
+                  isStreaming: false,
+                  toolsUsed: toolsUsed.length > 0 ? [...toolsUsed] : undefined,
+                },
               ]);
               setActivityLog([]);
               if (mutationOccurred) {
@@ -371,40 +382,69 @@ export default function ChatPage() {
                   msg.isStreaming &&
                   activityLog.length > 0 && (
                     <div
-                      className={`flex flex-col gap-2 ${
-                        msg.content ? "mb-3 border-b border-border pb-3" : ""
+                      className={`rounded-lg border border-border/60 bg-background/40 p-3 ${
+                        msg.content ? "mb-3" : ""
                       }`}
                     >
-                      {activityLog.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-2 text-xs text-muted-foreground"
-                        >
-                          {item.status === "active" ? (
-                            <Loader2 className="h-3 w-3 shrink-0 animate-spin text-indigo-500" />
-                          ) : (
-                            <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
-                          )}
-                          <span
-                            className={
-                              item.status === "done"
-                                ? "opacity-60"
-                                : "font-medium"
-                            }
+                      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
+                        Working on it
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {activityLog.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-2 text-sm"
                           >
-                            {item.label}
-                          </span>
-                        </div>
-                      ))}
+                            {item.status === "active" ? (
+                              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-indigo-500" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                            )}
+                            <span
+                              className={
+                                item.status === "done"
+                                  ? "text-muted-foreground line-through decoration-muted-foreground/40"
+                                  : "font-medium text-foreground/90"
+                              }
+                            >
+                              {item.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                 {/* Message text or initial spinner */}
                 {msg.content ? (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                  msg.role === "user" ? (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  ) : (
+                    <MarkdownContent content={msg.content} />
+                  )
                 ) : msg.isStreaming && activityLog.length === 0 ? (
                   <Loader2 className="h-4 w-4 animate-spin opacity-60" />
                 ) : null}
+
+                {/* Tools-used footer on completed AI messages */}
+                {msg.role === "ai" &&
+                  !msg.isStreaming &&
+                  msg.toolsUsed &&
+                  msg.toolsUsed.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-green-500/80" />
+                      <span className="font-medium">Used:</span>
+                      {msg.toolsUsed.map((tool) => (
+                        <span
+                          key={tool}
+                          className="rounded-full bg-background/60 px-2 py-0.5 font-mono"
+                        >
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
