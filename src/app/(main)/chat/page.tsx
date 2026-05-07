@@ -1,326 +1,42 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Send,
-  Loader2,
-  PlusCircle,
-  PieChart,
-  TrendingUp,
-  Search,
-  CheckCircle2,
-  RefreshCw,
-} from "lucide-react";
-import { toast } from "sonner";
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-interface Message {
-  role: "user" | "ai";
-  content: string;
-  isStreaming?: boolean;
-}
-
-interface ActivityItem {
-  id: string;
-  label: string;
-  status: "active" | "done";
-}
-
-type SSEEvent =
-  | { type: "token"; content: string }
-  | { type: "tool_start"; tool: string }
-  | { type: "tool_end"; tool: string }
-  | { type: "status"; step: string; label: string }
-  | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
-  | { type: "done" }
-  | { type: "error"; message: string };
-
-// ─── Constants ─────────────────────────────────────────────────────────────────
-
-const TOOL_STATUS_LABELS: Record<string, string> = {
-  add_transaction: "Adding transaction...",
-  add_transactions_bulk: "Adding transactions...",
-  list_transactions: "Fetching transactions...",
-  update_transaction: "Updating transaction...",
-  delete_transaction: "Deleting transaction...",
-  get_spending_summary: "Analyzing spending...",
-  get_categories: "Loading categories...",
-  get_monthly_history: "Fetching monthly data...",
-  get_yearly_history: "Fetching yearly data...",
-};
-
-const MUTATING_TOOLS = new Set([
-  "add_transaction",
-  "add_transactions_bulk",
-  "update_transaction",
-  "delete_transaction",
-]);
-
-const SUGGESTIONS = [
-  {
-    label: "Add expense",
-    prompt: "Add ₹500 food expense today",
-    icon: PlusCircle,
-    description: "Log a new transaction",
-  },
-  {
-    label: "Monthly summary",
-    prompt: "Show me a summary of this month's spending",
-    icon: PieChart,
-    description: "Category breakdown",
-  },
-  {
-    label: "Top spending",
-    prompt: "Where did I spend the most this month?",
-    icon: TrendingUp,
-    description: "Spending analysis",
-  },
-  {
-    label: "Recent transactions",
-    prompt: "Show my last 10 transactions",
-    icon: Search,
-    description: "View transactions",
-  },
-  {
-    label: "Bulk add",
-    prompt:
-      "Add these expenses: ₹500 food, ₹200 transport, ₹1000 rent — all today",
-    icon: PlusCircle,
-    description: "Add multiple at once",
-  },
-  {
-    label: "Yearly trends",
-    prompt: "Show my income vs expense trend for this year",
-    icon: TrendingUp,
-    description: "Year overview",
-  },
-];
-
-const WELCOME_MESSAGE: Message = {
-  role: "ai",
-  content: `Hi! I'm **Fintra AI**, your personal finance assistant.
-
-Here's what I can do for you:
-• **Add transactions** — "Add ₹500 for food today"
-• **Bulk add** — "Add ₹500 food, ₹200 cab, ₹1000 rent today"
-• **View & filter** — "Show last week's expenses"
-• **Edit / delete** — "Update my last food expense to ₹600"
-• **Analytics** — "Where did I spend most this month?"
-• **Trends** — "Compare my spending this year vs last"
-
-What would you like to do?`,
-};
-
-// ─── Component ─────────────────────────────────────────────────────────────────
+import { RefreshCw } from "lucide-react";
+import { useChat } from "@/lib/chat/useChat";
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { SuggestionChips } from "@/components/chat/SuggestionChips";
+import { ChatInput, type ChatInputHandle } from "@/components/chat/ChatInput";
+import { PAGE_SUGGESTIONS, PAGE_WELCOME } from "@/components/chat/suggestions";
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const chat = useChat({ welcomeMessage: PAGE_WELCOME, trackUsage: true });
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
-  const [lastQueryUsage, setLastQueryUsage] = useState<{
-    inputTokens: number;
-    outputTokens: number;
-    cost: number;
-  } | null>(null);
-
+  const inputRef = useRef<ChatInputHandle>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, activityLog]);
+  }, [chat.messages, chat.activityLog]);
 
-  const clearChat = () => {
-    abortRef.current?.abort();
-    setMessages([WELCOME_MESSAGE]);
+  const handleSend = async (text?: string) => {
+    const value = (text ?? input).trim();
+    if (!value) return;
     setInput("");
-    setIsLoading(false);
-    setActivityLog([]);
-    setLastQueryUsage(null);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "48px";
-    }
+    inputRef.current?.resetHeight();
+    await chat.send(value);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    // Auto-grow up to max-height, then scroll
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  const handleReset = () => {
+    chat.reset();
+    setInput("");
+    inputRef.current?.resetHeight();
   };
 
-  // Stable upsert — only uses the state setter (stable ref), no deps needed
-  const upsertActivity = useCallback(
-    (id: string, label: string, status: "active" | "done") => {
-      setActivityLog((prev) => {
-        const idx = prev.findIndex((item) => item.id === id);
-        if (idx >= 0) {
-          const next = [...prev];
-          next[idx] = { id, label, status };
-          return next;
-        }
-        return [...prev, { id, label, status }];
-      });
-    },
-    []
-  );
-
-  const handleSend = useCallback(
-    async (text?: string) => {
-      const content = (text ?? input).trim();
-      if (!content || isLoading) return;
-
-      const updatedMessages: Message[] = [
-        ...messages,
-        { role: "user", content },
-      ];
-      setMessages(updatedMessages);
-      setInput("");
-      setIsLoading(true);
-      setActivityLog([]);
-
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "48px";
-      }
-
-      const apiMessages = updatedMessages
-        .filter((m) => !m.isStreaming)
-        .map((m) => ({
-          role: m.role === "ai" ? "assistant" : "user",
-          content: m.content,
-        }));
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "ai", content: "", isStreaming: true },
-      ]);
-
-      let streamedContent = "";
-      let mutationOccurred = false;
-
-      const abort = new AbortController();
-      abortRef.current = abort;
-
-      try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages }),
-          signal: abort.signal,
-        });
-
-        if (!response.ok) throw new Error(`Server error ${response.status}`);
-
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const raw = line.slice(6).trim();
-            if (!raw) continue;
-
-            let event: SSEEvent;
-            try {
-              event = JSON.parse(raw);
-            } catch {
-              continue;
-            }
-
-            if (event.type === "token") {
-              // First token — mark all pending activity steps as done
-              if (!streamedContent) {
-                setActivityLog((prev) =>
-                  prev.map((item) => ({ ...item, status: "done" as const }))
-                );
-              }
-              streamedContent += event.content;
-              setMessages((prev) => [
-                ...prev.slice(0, -1),
-                { role: "ai", content: streamedContent, isStreaming: true },
-              ]);
-            } else if (event.type === "status") {
-              upsertActivity(event.step, event.label, "active");
-            } else if (event.type === "tool_start") {
-              // Agent decided to use a tool — thinking phase is done
-              setActivityLog((prev) =>
-                prev.map((item) =>
-                  item.id === "thinking" ? { ...item, status: "done" } : item
-                )
-              );
-              const label =
-                TOOL_STATUS_LABELS[event.tool] ?? `Running ${event.tool}...`;
-              upsertActivity(event.tool, label, "active");
-              if (MUTATING_TOOLS.has(event.tool)) mutationOccurred = true;
-            } else if (event.type === "tool_end") {
-              setActivityLog((prev) =>
-                prev.map((item) =>
-                  item.id === event.tool
-                    ? { ...item, status: "done" }
-                    : item
-                )
-              );
-            } else if (event.type === "usage") {
-              setLastQueryUsage({
-                inputTokens: event.inputTokens,
-                outputTokens: event.outputTokens,
-                cost: event.cost,
-              });
-            } else if (event.type === "done") {
-              setMessages((prev) => [
-                ...prev.slice(0, -1),
-                { role: "ai", content: streamedContent, isStreaming: false },
-              ]);
-              setActivityLog([]);
-              if (mutationOccurred) {
-                window.dispatchEvent(new Event("transaction-added"));
-              }
-            } else if (event.type === "error") {
-              throw new Error(event.message);
-            }
-          }
-        }
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
-
-        console.error("[ChatPage]", err);
-        toast.error("Something went wrong. Please try again.");
-
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          {
-            role: "ai",
-            content: "Sorry, something went wrong. Please try again.",
-            isStreaming: false,
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-        setActivityLog([]);
-      }
-    },
-    [input, isLoading, messages, upsertActivity]
-  );
-
-  const showSuggestions = messages.length <= 1;
+  const showSuggestions = chat.messages.length <= 1;
 
   return (
     <div className="flex h-full flex-col">
-      {/* Page header */}
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div>
           <h1 className="text-lg font-semibold">AI Assistant</h1>
@@ -331,8 +47,8 @@ export default function ChatPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={clearChat}
-          disabled={isLoading}
+          onClick={handleReset}
+          disabled={chat.isLoading}
           className="gap-2 text-muted-foreground"
         >
           <RefreshCw className="h-4 w-4" />
@@ -340,150 +56,53 @@ export default function ChatPage() {
         </Button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex items-start gap-3 ${
-                msg.role === "user" ? "flex-row-reverse" : "flex-row"
-              }`}
-            >
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
-                }`}
-              >
-                {msg.role === "user" ? "U" : "✨"}
-              </div>
-              <div
-                className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "rounded-tr-sm bg-primary text-primary-foreground"
-                    : "rounded-tl-sm bg-muted"
-                }`}
-              >
-                {/* Live activity log inside the streaming AI bubble */}
-                {msg.role === "ai" &&
-                  msg.isStreaming &&
-                  activityLog.length > 0 && (
-                    <div
-                      className={`flex flex-col gap-2 ${
-                        msg.content ? "mb-3 border-b border-border pb-3" : ""
-                      }`}
-                    >
-                      {activityLog.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-2 text-xs text-muted-foreground"
-                        >
-                          {item.status === "active" ? (
-                            <Loader2 className="h-3 w-3 shrink-0 animate-spin text-indigo-500" />
-                          ) : (
-                            <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
-                          )}
-                          <span
-                            className={
-                              item.status === "done"
-                                ? "opacity-60"
-                                : "font-medium"
-                            }
-                          >
-                            {item.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                {/* Message text or initial spinner */}
-                {msg.content ? (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
-                ) : msg.isStreaming && activityLog.length === 0 ? (
-                  <Loader2 className="h-4 w-4 animate-spin opacity-60" />
-                ) : null}
-              </div>
-            </div>
-          ))}
-
+          {chat.messages.map((msg, i) => {
+            const isLast = i === chat.messages.length - 1;
+            return (
+              <MessageBubble
+                key={i}
+                message={msg}
+                activityLog={isLast ? chat.activityLog : []}
+                isLoading={chat.isLoading}
+                showToolsUsed
+                onResolveInterrupt={chat.resumeInterrupt}
+              />
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Suggestion chips — only shown when chat is fresh */}
       {showSuggestions && (
         <div className="border-t bg-muted/20 px-6 py-4">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Try asking
           </p>
-          <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2 sm:grid-cols-3">
-            {SUGGESTIONS.map(
-              ({ label, prompt, icon: Icon, description }, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(prompt)}
-                  disabled={isLoading}
-                  className="flex cursor-pointer items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <div>
-                    <div className="font-medium">{label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {description}
-                    </div>
-                  </div>
-                </button>
-              )
-            )}
-          </div>
+          <SuggestionChips
+            suggestions={PAGE_SUGGESTIONS}
+            variant="card"
+            disabled={chat.isLoading}
+            onSelect={handleSend}
+          />
         </div>
       )}
 
-      {/* Input */}
       <div className="border-t bg-background px-6 py-4">
-        <div className="mx-auto flex max-w-3xl items-end gap-3">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Ask me anything about your finances... (Enter to send, Shift+Enter for new line)"
-            className="min-h-[48px] max-h-[160px] resize-none overflow-y-auto rounded-xl bg-muted/50 focus-visible:ring-1"
-            disabled={isLoading}
-            rows={1}
-          />
-          <Button
-            onClick={() => handleSend()}
-            size="icon"
-            className="h-12 w-12 shrink-0 rounded-xl"
-            disabled={isLoading || !input.trim()}
-            aria-label="Send"
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
+        <ChatInput
+          ref={inputRef}
+          value={input}
+          onChange={setInput}
+          onSend={() => handleSend()}
+          isLoading={chat.isLoading}
+          placeholder="Ask me anything about your finances... (Enter to send, Shift+Enter for new line)"
+        />
         <div className="mt-2 flex items-center justify-between">
-          {lastQueryUsage ? (
+          {chat.lastUsage ? (
             <span className="text-xs text-muted-foreground tabular-nums">
-              {(
-                lastQueryUsage.inputTokens + lastQueryUsage.outputTokens
-              ).toLocaleString()}{" "}
-              tokens
-              {lastQueryUsage.cost > 0
-                ? ` · $${lastQueryUsage.cost.toFixed(5)}`
-                : ""}
+              {(chat.lastUsage.inputTokens + chat.lastUsage.outputTokens).toLocaleString()} tokens
+              {chat.lastUsage.cost > 0 ? ` · $${chat.lastUsage.cost.toFixed(5)}` : ""}
             </span>
           ) : (
             <span />

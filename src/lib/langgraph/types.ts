@@ -50,5 +50,5 @@ export function calculateCost(
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   provider: "openrouter",
-  modelName: "openai/gpt-oss-20b",
+  modelName: "openai/gpt-oss-20b:free",
 };
