@@ -3,7 +3,6 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface ChatInputHandle {
@@ -25,16 +24,17 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
   { value, onChange, onSend, isLoading, disabled, placeholder, variant = "textarea" },
   ref
 ) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const compactMinHeight = 40;
+  const expandedMinHeight = 48;
+  const minHeight = variant === "input" ? compactMinHeight : expandedMinHeight;
 
   useImperativeHandle(ref, () => ({
     focus: () => {
-      inputRef.current?.focus();
       textareaRef.current?.focus();
     },
     resetHeight: () => {
-      if (textareaRef.current) textareaRef.current.style.height = "48px";
+      if (textareaRef.current) textareaRef.current.style.height = `${minHeight}px`;
     },
   }));
 
@@ -54,14 +54,15 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
 
   if (variant === "input") {
     return (
-      <div className="flex items-center gap-2">
-        <Input
-          ref={inputRef}
+      <div className="flex items-end gap-2">
+        <Textarea
+          ref={textareaRef}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="rounded-full bg-muted/50 focus-visible:ring-1"
+          rows={1}
+          className="min-h-[40px] max-h-[160px] resize-none overflow-y-auto rounded-3xl bg-muted/50 px-4 py-2 leading-5 focus-visible:ring-1"
           disabled={isLoading || disabled}
         />
         <Button
