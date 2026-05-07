@@ -4,6 +4,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
+import { AlertTriangle, Info, Lightbulb, OctagonAlert } from "lucide-react";
 
 // Tables are rendered via a custom parser so they NEVER depend on remark-gfm
 // loading correctly under Turbopack SSR. Everything else uses ReactMarkdown.
@@ -117,7 +118,43 @@ interface TextBlock {
   type: "text";
   text: string;
 }
-type Block = TableBlock | TextBlock;
+type AlertVariant = "warning" | "caution" | "tip" | "note";
+interface AlertBlock {
+  type: "alert";
+  variant: AlertVariant;
+  text: string;
+}
+type Block = TableBlock | TextBlock | AlertBlock;
+
+// ─── Alert blockquote parser ─────────────────────────────────────────────────
+// Matches GitHub-flavored alerts:
+//   > [!WARNING]
+//   > body
+//   > body
+// Or single-line: `> [!TIP] body`. The first line of the blockquote must contain
+// the marker, and the alert ends at the first non-`>` (or blank) line.
+
+const ALERT_TYPES: Record<string, AlertVariant> = {
+  WARNING: "warning",
+  CAUTION: "caution",
+  TIP: "tip",
+  NOTE: "note",
+  INSIGHT: "note",
+  IMPORTANT: "warning",
+};
+
+function parseAlertStart(line: string): { variant: AlertVariant; rest: string } | null {
+  const m = line.match(/^\s*>\s*\[!(\w+)\]\s*(.*)$/);
+  if (!m) return null;
+  const variant = ALERT_TYPES[m[1].toUpperCase()];
+  if (!variant) return null;
+  return { variant, rest: m[2].trim() };
+}
+
+function stripQuote(line: string): string | null {
+  const m = line.match(/^\s*>\s?(.*)$/);
+  return m ? m[1] : null;
+}
 
 function splitBlocks(content: string): Block[] {
   const lines = content.split("\n");
@@ -135,6 +172,28 @@ function splitBlocks(content: string): Block[] {
     const line = lines[i];
     const trimmed = line.trim();
     const pipes = (trimmed.match(/\|/g) ?? []).length;
+
+    // Alert blockquote: `> [!WARNING]` (optional inline body) followed by
+    // any number of `> ...` continuation lines.
+    const alertStart = parseAlertStart(line);
+    if (alertStart) {
+      flush();
+      const bodyParts: string[] = [];
+      if (alertStart.rest) bodyParts.push(alertStart.rest);
+      i++;
+      while (i < lines.length) {
+        const stripped = stripQuote(lines[i]);
+        if (stripped === null) break;
+        bodyParts.push(stripped);
+        i++;
+      }
+      blocks.push({
+        type: "alert",
+        variant: alertStart.variant,
+        text: bodyParts.join("\n").trim(),
+      });
+      continue;
+    }
 
     if (pipes >= 2) {
       let sepIdx = -1;
@@ -217,6 +276,62 @@ function MdTable({
   );
 }
 
+// ─── Alert JSX ───────────────────────────────────────────────────────────────
+
+const ALERT_STYLES: Record<
+  AlertVariant,
+  { container: string; icon: string; Icon: React.ComponentType<{ className?: string }> }
+> = {
+  warning: {
+    container:
+      "border-red-200 bg-red-50 text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100",
+    icon: "text-red-500 dark:text-red-400",
+    Icon: AlertTriangle,
+  },
+  caution: {
+    container:
+      "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-100",
+    icon: "text-rose-600 dark:text-rose-400",
+    Icon: OctagonAlert,
+  },
+  tip: {
+    container:
+      "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-100",
+    icon: "text-emerald-600 dark:text-emerald-400",
+    Icon: Lightbulb,
+  },
+  note: {
+    container:
+      "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-100",
+    icon: "text-sky-600 dark:text-sky-400",
+    Icon: Info,
+  },
+};
+
+function MdAlert({ variant, text }: { variant: AlertVariant; text: string }) {
+  const { container, icon, Icon } = ALERT_STYLES[variant];
+  return (
+    <div
+      className={`my-2 flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-[13px] leading-snug ${container}`}
+      role="note"
+    >
+      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${icon}`} />
+      <div className="min-w-0 flex-1">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    </div>
+  );
+}
+
 // ─── ReactMarkdown components for non-table content ──────────────────────────
 
 const markdownComponents: Components = {
@@ -257,10 +372,14 @@ export function MarkdownContent({ content }: { content: string }) {
 
   return (
     <div className="space-y-1">
-      {blocks.map((block, idx) =>
-        block.type === "table" ? (
-          <MdTable key={idx} headers={block.headers} rows={block.rows} />
-        ) : (
+      {blocks.map((block, idx) => {
+        if (block.type === "table") {
+          return <MdTable key={idx} headers={block.headers} rows={block.rows} />;
+        }
+        if (block.type === "alert") {
+          return <MdAlert key={idx} variant={block.variant} text={block.text} />;
+        }
+        return (
           <ReactMarkdown
             key={idx}
             remarkPlugins={[remarkGfm]}
@@ -268,8 +387,8 @@ export function MarkdownContent({ content }: { content: string }) {
           >
             {block.text}
           </ReactMarkdown>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }
