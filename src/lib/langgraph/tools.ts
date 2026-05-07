@@ -2,6 +2,7 @@ import { tool } from "@langchain/core/tools";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { z } from "zod";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { hitlTools } from "./hitlTools";
 
 // ─── Internal types ────────────────────────────────────────────────────────────
 
@@ -729,6 +730,7 @@ export const financeTools = [
   getSpendingSummaryToolDef,
   getMonthlyHistoryToolDef,
   getYearlyHistoryToolDef,
+  ...hitlTools,
 ];
 
 // Tools that mutate data — used by the frontend to trigger a dashboard refresh

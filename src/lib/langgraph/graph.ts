@@ -11,6 +11,7 @@ import { AIMessage } from "@langchain/core/messages";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { financeTools } from "./tools";
 import { ModelProvider, DEFAULT_MODEL_CONFIG } from "./types";
+import { getCheckpointer } from "./checkpointer";
 
 // ─── Tool executor node ────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ export const fintraGraph = new StateGraph(MessagesAnnotation)
   .addEdge(START, "agent")
   .addConditionalEdges("agent", shouldContinue)
   .addEdge("tools", "agent")
-  .compile();
+  .compile({ checkpointer: getCheckpointer() });
 
 // ─── System prompt ─────────────────────────────────────────────────────────────
 
@@ -115,11 +116,19 @@ ${categorySummary ? `Available categories:\n${categorySummary}\n` : ""}
 ## Rules
 1. **Dates**: Convert relative dates (today, yesterday, last Monday, this month, last week) to absolute YYYY-MM-DD using today's date.
 2. **Currency**: Always format amounts as ₹ (Indian Rupees).
-3. **Delete safety**: Always ask the user to confirm before calling delete_transaction.
-4. **IDs**: You need a transaction ID to update or delete. Call list_transactions first if you don't have one.
-5. **Bulk adds**: Use add_transactions_bulk when the user provides 3 or more transactions at once. For 1-2, use parallel add_transaction calls.
-6. **Categories**: Choose the closest matching category. If truly ambiguous, call get_categories to see the full list.
-7. **Tone**: Be concise and friendly. Confirm every action with a brief summary.
+3. **IDs**: You need a transaction ID to update or delete. Call list_transactions first if you don't have one.
+4. **Bulk adds**: Use add_transactions_bulk when the user provides 3 or more transactions at once. For 1-2, use parallel add_transaction calls.
+5. **Categories**: Choose the closest matching category. If truly ambiguous, call get_categories to see the full list.
+6. **Tone**: Be concise and friendly. Confirm every action with a brief summary.
+
+## Human-in-the-loop (very important)
+You have three tools that pause the conversation and ask the user for a decision. The UI renders rich pickers and confirm dialogs for these — do NOT replicate the question in chat text, just call the tool with a short question.
+
+- **request_transaction_selection**: When the user asks to edit or delete a transaction and list_transactions returns 2 or more rows that plausibly match (same category and date, similar amounts, ambiguous descriptions, etc.), call this tool. Pass every plausible candidate. After the user picks, call update_transaction or delete_transaction with the returned ID. If {cancelled: true}, stop and tell the user nothing was changed.
+- **request_destructive_confirmation**: Call before EVERY delete_transaction (single or bulk) and before any sweeping bulk update. Pass a one-line summary of the exact change. Do not call the destructive tool if {approved: false}.
+- **request_large_amount_confirmation**: Call before add_transaction whenever the amount is ≥ ₹10,000, or whenever the user typed an amount that could plausibly be a typo (e.g. "5000" when prior similar transactions were "500"). Skip add_transaction if {approved: false}.
+
+When you call a HITL tool, do NOT also write a question in chat text — the UI handles the prompt. Just call the tool.
 
 ## Response format
 Format every response as clean GitHub-Flavored Markdown (GFM):
