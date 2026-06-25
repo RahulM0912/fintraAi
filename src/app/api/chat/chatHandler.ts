@@ -6,15 +6,29 @@ import {
   DEFAULT_MODEL_CONFIG,
   calculateCost,
 } from "@/lib/langgraph/types";
+import { summarizeHistory } from "@/lib/langgraph/summarize";
 import type { InterruptPayload, InterruptResume } from "@/lib/langgraph";
 import type { SSEEvent } from "./sse";
+
+// ─── Conversation window ───────────────────────────────────────────────────────
+//
+// The client sends only the messages not yet folded into `priorSummary` (the
+// "tail"). We keep the last WINDOW messages verbatim and, once the tail grows by
+// FOLD_BATCH beyond that, fold the overflow into the running summary. This caps
+// the transcript the model sees per turn instead of replaying the whole history.
+
+const WINDOW = 5;
+const FOLD_BATCH = 4;
 
 // ─── Public input shapes ───────────────────────────────────────────────────────
 
 export interface ChatBody {
   threadId: string;
   // Either a fresh user turn (`messages`) OR a resume of a paused interrupt (`resume`)
+  // `messages` is the unsummarised tail; everything older lives in `priorSummary`.
   messages?: { role: "user" | "assistant"; content: string }[];
+  priorSummary?: string;
+  summarizedCount?: number;
   resume?: InterruptResume;
 }
 
@@ -57,8 +71,20 @@ async function buildGraphInput(body: ChatBody): Promise<GraphInput> {
     m.role === "user" ? new HumanMessage(m.content) : new AIMessage(m.content)
   );
 
+  const summaryMsg = body.priorSummary
+    ? [
+        new SystemMessage(
+          `Earlier conversation summary (older messages, condensed):\n${body.priorSummary}`
+        ),
+      ]
+    : [];
+
   return {
-    messages: [new SystemMessage(buildSystemPrompt(today, categorySummary)), ...messages],
+    messages: [
+      new SystemMessage(buildSystemPrompt(today, categorySummary)),
+      ...summaryMsg,
+      ...messages,
+    ],
   };
 }
 
@@ -115,6 +141,17 @@ export async function runChat(
         }
         break;
       }
+      case "on_chain_end": {
+        // Fast-path confirmation is synthesised (no model stream) — forward its
+        // text to the client as a single token chunk.
+        if (event.metadata?.langgraph_node === "confirm") {
+          const msgs = event.data?.output?.messages;
+          const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined;
+          const content = typeof msg?.content === "string" ? msg.content : "";
+          if (content) send({ type: "token", content });
+        }
+        break;
+      }
     }
   }
 
@@ -129,6 +166,31 @@ export async function runChat(
     send({ type: "interrupt", threadId: body.threadId, payload: pendingInterrupts[0] });
     send({ type: "done" });
     return;
+  }
+
+  // Turn completed — fold any overflow past the verbatim window into the running
+  // summary and hand the updated summary back to the client. Only the messages
+  // that aged out are summarised; the prior summary is reused incrementally.
+  if (!body.resume && body.messages) {
+    const tail = body.messages;
+    if (tail.length >= WINDOW + FOLD_BATCH) {
+      const foldCount = tail.length - WINDOW;
+      const summarizedCount = body.summarizedCount ?? 0;
+      try {
+        const newSummary = await summarizeHistory(
+          body.priorSummary ?? "",
+          tail.slice(0, foldCount)
+        );
+        send({
+          type: "summary",
+          summary: newSummary,
+          summarizedCount: summarizedCount + foldCount,
+        });
+      } catch (err) {
+        // Summary refresh is best-effort; a failure must not break the turn.
+        console.error("[chat] summary fold failed", err);
+      }
+    }
   }
 
   const cost = calculateCost(

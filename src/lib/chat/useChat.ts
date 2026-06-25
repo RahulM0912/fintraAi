@@ -22,6 +22,8 @@ interface UseChatOptions {
 interface ChatRequestBody {
   threadId: string;
   messages?: { role: "user" | "assistant"; content: string }[];
+  priorSummary?: string;
+  summarizedCount?: number;
   resume?: InterruptResume;
 }
 
@@ -40,6 +42,11 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
 
   const threadIdRef = useRef<string>(newThreadId());
   const abortRef = useRef<AbortController | null>(null);
+
+  // Rolling-summary memory: everything before `summarizedCountRef` messages is
+  // condensed into `summaryRef`; only the unsummarised tail is sent each turn.
+  const summaryRef = useRef<string>("");
+  const summarizedCountRef = useRef<number>(0);
 
   const handleEvent = useCallback(
     (event: SSEEvent, ctx: StreamCtx) => {
@@ -68,6 +75,9 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
           outputTokens: event.outputTokens,
           cost: event.cost,
         });
+      } else if (event.type === "summary") {
+        summaryRef.current = event.summary;
+        summarizedCountRef.current = event.summarizedCount;
       } else if (event.type === "done") {
         setMessages((prev) => [
           ...prev.slice(0, -1),
@@ -143,7 +153,19 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
           role: m.role === "ai" ? ("assistant" as const) : ("user" as const),
           content: m.content,
         }));
-      await stream({ threadId: threadIdRef.current, messages: apiMessages });
+
+      // Fresh turn → new graph thread so the in-process checkpointer never
+      // accumulates history across turns (it only spans a turn's interrupt/resume).
+      threadIdRef.current = newThreadId();
+
+      // Send only the unsummarised tail; older messages are carried by the summary.
+      const tail = apiMessages.slice(summarizedCountRef.current);
+      await stream({
+        threadId: threadIdRef.current,
+        messages: tail,
+        priorSummary: summaryRef.current || undefined,
+        summarizedCount: summarizedCountRef.current,
+      });
     },
     [isLoading, messages, stream]
   );
@@ -164,6 +186,8 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
   const reset = useCallback(() => {
     abortRef.current?.abort();
     threadIdRef.current = newThreadId();
+    summaryRef.current = "";
+    summarizedCountRef.current = 0;
     setMessages([welcomeMessage]);
     activity.clear();
     setIsLoading(false);

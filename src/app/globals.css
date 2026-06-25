@@ -122,4 +122,67 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .font-sora {
+    font-family: var(--font-sora);
+  }
+}
+
+/* ── Landing page design tokens ─────────────────────────────── */
+/* Light mode (default) */
+:root {
+  --ld-bg: #f5f6fa;
+  --ld-bg2: #ffffff;
+  --ld-bg3: #eef0f7;
+  --ld-bg4: #e4e7f2;
+  --ld-surface: #ffffff;
+  --ld-surface2: #f0f2fa;
+  --ld-border: #dde0ee;
+  --ld-border2: #c8cce0;
+  --ld-text: #0d0f1a;
+  --ld-text2: #4a5070;
+  --ld-text3: #8890b0;
+  --ld-purple: #5b52e8;
+  --ld-purple2: #7c6ff7;
+  --ld-purple-bg: #eeecff;
+  --ld-purple-border: #c4c0f8;
+  --ld-green: #15a860;
+  --ld-green-bg: #e6f9ef;
+  --ld-red: #d94040;
+  --ld-red-bg: #fdeaea;
+  --ld-accent-glow: rgba(91, 82, 232, 0.1);
+}
+
+/* Dark mode */
+.dark {
+  --ld-bg: #0d0f14;
+  --ld-bg2: #13161e;
+  --ld-bg3: #1a1e2a;
+  --ld-bg4: #222636;
+  --ld-surface: #1e2230;
+  --ld-surface2: #262b3d;
+  --ld-border: #2e3449;
+  --ld-border2: #3a4060;
+  --ld-text: #f0f2f8;
+  --ld-text2: #9ba3bf;
+  --ld-text3: #5c6480;
+  --ld-purple: #7c6ff7;
+  --ld-purple2: #9d98fa;
+  --ld-purple-bg: #1e1c3a;
+  --ld-purple-border: #3d3880;
+  --ld-green: #22c97a;
+  --ld-green-bg: #0d2620;
+  --ld-red: #f06060;
+  --ld-red-bg: #2a1414;
+  --ld-accent-glow: rgba(124, 111, 247, 0.15);
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

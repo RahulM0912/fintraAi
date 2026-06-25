@@ -721,7 +721,9 @@ export const getYearlyHistoryToolDef = tool(
 // ─── Exported tool registry ────────────────────────────────────────────────────
 
 export const financeTools = [
-  getCategoriesToolDef,
+  // get_categories intentionally omitted from the bound set — the full category
+  // list is injected into the system prompt, and add/update return the available
+  // list on a bad name. Keeping it unbound saves a tool schema on every call.
   addTransactionToolDef,
   addTransactionsBulkToolDef,
   listTransactionsToolDef,
