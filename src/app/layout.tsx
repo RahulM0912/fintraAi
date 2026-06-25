@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Sora } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,9 +15,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "Fintra AI",
-  description: "Smart finance insights powered by AI",
+  title: "Fintra — AI Finance Tracker",
+  description: "Tell Fintra what you spent. It understands, logs it, and shows you exactly where your money goes.",
 };
 
 export default function RootLayout({
@@ -28,10 +35,12 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${sora.variable} antialiased`}
           suppressHydrationWarning
         >
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
           <Toaster richColors />
         </body>
       </html>

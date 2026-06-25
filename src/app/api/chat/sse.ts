@@ -8,6 +8,7 @@ export type SSEEvent =
   | { type: "tool_end"; tool: string }
   | { type: "status"; step: string; label: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
+  | { type: "summary"; summary: string; summarizedCount: number }
   | { type: "interrupt"; threadId: string; payload: InterruptPayload }
   | { type: "done" }
   | { type: "error"; message: string };
