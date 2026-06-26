@@ -18,7 +18,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import { Calendar, DollarSign } from "lucide-react"
+import { Calendar, IndianRupee } from "lucide-react"
 import { toast } from "sonner"
 
 type Category = { id: string; name: string; icon: string }
@@ -112,7 +112,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange, onSucces
         <DialogHeader>
           <DialogTitle className="flex items-baseline gap-2 text-lg font-semibold">
             Edit{" "}
-            <span className={isIncome ? "text-emerald-400" : "text-rose-400"}>
+            <span className={isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}>
               {isIncome ? "income" : "expense"}
             </span>{" "}
             transaction
@@ -124,16 +124,16 @@ export function EditTransactionModal({ transaction, open, onOpenChange, onSucces
 
         <div className="grid gap-4 py-3">
           {/* Type toggle */}
-          <div className="flex bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl w-full sm:w-64">
+          <div className="flex bg-[var(--surface-2)] p-1 rounded-xl w-full sm:w-64">
             <button
               onClick={() => { setInternalType("expense"); setCategoryId("") }}
-              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${!isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-rose-600" : "text-gray-500 hover:text-gray-900"}`}
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${!isIncome ? "bg-[var(--surface)] shadow-sm text-[var(--neg)]" : "text-[var(--ink-2)] hover:text-[var(--ink)]"}`}
             >
               Expense
             </button>
             <button
               onClick={() => { setInternalType("income"); setCategoryId("") }}
-              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${isIncome ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600" : "text-gray-500 hover:text-gray-900"}`}
+              className={`cursor-pointer flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${isIncome ? "bg-[var(--surface)] shadow-sm text-[var(--pos)]" : "text-[var(--ink-2)] hover:text-[var(--ink)]"}`}
             >
               Income
             </button>
@@ -156,7 +156,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange, onSucces
               <Label htmlFor="edit-amount" className="mb-2">Amount</Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
+                  <IndianRupee className="h-4 w-4" />
                 </span>
                 <Input
                   id="edit-amount"

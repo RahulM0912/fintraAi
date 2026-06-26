@@ -9,8 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, setMonth, setYear } from "date-fns";
 
-const EXPENSE_COLORS = ['#4f46e5', '#818cf8', '#c7d2fe', '#e0e7ff', '#a5b4fc', '#6366f1'];
-const INCOME_COLORS = ['#16a34a', '#4ade80', '#bbf7d0', '#dcfce7', '#86efac', '#22c55e'];
+// Brand purple ramp for expenses, green ramp for income — matches landing palette
+const EXPENSE_COLORS = ['#5b52e8', '#7c6ff7', '#9d98fa', '#c4c0f8', '#a89ffb', '#6d63ec'];
+const INCOME_COLORS = ['#15a860', '#22c97a', '#4ade80', '#86efac', '#34d27e', '#1e9d63'];
 
 export function MonthlyReportCard() {
   const [selectedChart, setSelectedChart] = useState<'expense' | 'income'>('expense');
@@ -78,10 +79,10 @@ export function MonthlyReportCard() {
       const data = payload[0].payload;
       if (data.name === 'None') return null;
       return (
-        <div className="bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 p-2 rounded-lg shadow-lg text-xs">
-          <p className="font-bold text-gray-800 dark:text-gray-200">{data.name}</p>
-          <p className="text-gray-600 dark:text-gray-400">₹{(data.amount || 0).toLocaleString('en-IN')}</p>
-          <p className="text-gray-500 dark:text-gray-500">{Math.round(data.value)}%</p>
+        <div className="bg-[var(--surface)] border border-[var(--hairline)] p-2 rounded-lg shadow-lg text-xs">
+          <p className="font-bold text-[var(--ink)]">{data.name}</p>
+          <p className="text-[var(--ink-2)]">₹{(data.amount || 0).toLocaleString('en-IN')}</p>
+          <p className="text-[var(--ink-3)]">{Math.round(data.value)}%</p>
         </div>
       );
     }
@@ -90,7 +91,7 @@ export function MonthlyReportCard() {
 
   if (isLoading) {
     return (
-      <Card className="bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full flex flex-col">
+      <Card className="bg-[var(--surface)] border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full flex flex-col">
         <CardContent className="p-8 flex-1 flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -135,12 +136,12 @@ export function MonthlyReportCard() {
   }
 
   return (
-    <Card className="bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full flex flex-col relative overflow-hidden">
+    <Card className="bg-[var(--surface)] border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] h-full flex flex-col relative overflow-hidden">
       <CardContent className="p-8 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-[17px] font-bold text-gray-800 dark:text-gray-100 tracking-tight">Monthly Report</h2>
+          <h2 className="font-sora text-[17px] font-bold text-[var(--ink)] tracking-tight">Monthly Report</h2>
           <div className="flex items-center gap-1">
-            <button onClick={handlePrevMonth} className="cursor-pointer p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            <button onClick={handlePrevMonth} className="cursor-pointer p-1 text-[var(--ink-3)] hover:text-[var(--ink)] transition-colors">
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
 
@@ -150,7 +151,7 @@ export function MonthlyReportCard() {
               if (o) setPickerYear(currentDate.getFullYear())
             }}>
               <PopoverTrigger asChild>
-                <button className="cursor-pointer text-[10px] font-bold tracking-widest text-gray-400 uppercase w-20 text-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded px-1 py-0.5 hover:bg-muted">
+                <button className="cursor-pointer text-[10px] font-bold tracking-widest text-[var(--ink-3)] uppercase w-20 text-center hover:text-[var(--ink)] transition-colors rounded px-1 py-0.5 hover:bg-[var(--surface-2)]">
                   {mounted ? format(currentDate, 'MMM yyyy') : '--'}
                 </button>
               </PopoverTrigger>
@@ -199,7 +200,7 @@ export function MonthlyReportCard() {
               </PopoverContent>
             </Popover>
 
-            <button onClick={handleNextMonth} className="cursor-pointer p-1 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            <button onClick={handleNextMonth} className="cursor-pointer p-1 text-[var(--ink-3)] hover:text-[var(--ink)] transition-colors">
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -207,13 +208,13 @@ export function MonthlyReportCard() {
 
         <div className="grid grid-cols-2 gap-4 mb-2">
           <div className="flex flex-col items-center">
-            <h3 className="text-[9px] font-bold text-[#dc2626]/70 uppercase tracking-[0.2em] mb-1">Expenses</h3>
-            <span className="text-xl font-bold text-[#dc2626] tracking-tight mb-4">- ₹{expenseFormatted}</span>
-            
+            <h3 className="text-[9px] font-bold text-[var(--neg)] uppercase tracking-[0.2em] mb-1 opacity-80">Expenses</h3>
+            <span className="font-sora text-xl font-bold text-[var(--neg)] tracking-tight mb-4">- ₹{expenseFormatted}</span>
+
             <div
               className={cn(
                 "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full outline-none [&_svg]:outline-none",
-                selectedChart === 'expense' ? "shadow-[0_0_20px_rgba(79,70,229,0.3)] bg-indigo-50/10 dark:bg-indigo-900/10 scale-110" : "scale-100 opacity-90 hover:scale-105"
+                selectedChart === 'expense' ? "shadow-[0_0_20px_rgba(91,82,232,0.3)] bg-[var(--brand-bg)] scale-110" : "scale-100 opacity-90 hover:scale-105"
               )}
               onClick={() => setSelectedChart('expense')}
               tabIndex={-1}
@@ -247,13 +248,13 @@ export function MonthlyReportCard() {
           </div>
           
           <div className="flex flex-col items-center">
-            <h3 className="text-[9px] font-bold text-[#16a34a]/70 uppercase tracking-[0.2em] mb-1">Income</h3>
-            <span className="text-xl font-bold text-[#16a34a] tracking-tight mb-4">₹{incomeFormatted}</span>
-            
+            <h3 className="text-[9px] font-bold text-[var(--pos)] uppercase tracking-[0.2em] mb-1 opacity-80">Income</h3>
+            <span className="font-sora text-xl font-bold text-[var(--pos)] tracking-tight mb-4">₹{incomeFormatted}</span>
+
             <div
               className={cn(
                 "h-[100px] w-[100px] relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 rounded-full outline-none [&_svg]:outline-none",
-                selectedChart === 'income' ? "shadow-[0_0_20px_rgba(22,163,74,0.35)] bg-emerald-50/10 dark:bg-emerald-900/10 scale-110" : "scale-100 opacity-90 hover:scale-105"
+                selectedChart === 'income' ? "shadow-[0_0_20px_rgba(21,168,96,0.35)] bg-[var(--pos-bg)] scale-110" : "scale-100 opacity-90 hover:scale-105"
               )}
               onClick={() => setSelectedChart('income')}
               tabIndex={-1}
@@ -287,12 +288,12 @@ export function MonthlyReportCard() {
           </div>
         </div>
 
-        <p className="text-[9px] text-center text-gray-400 italic mb-6 mt-6">Click a chart to view breakdown</p>
+        <p className="text-[9px] text-center text-[var(--ink-3)] italic mb-6 mt-6">Click a chart to view breakdown</p>
 
-        <hr className="border-gray-100 dark:border-zinc-800 mb-6" />
+        <hr className="border-[var(--hairline)] mb-6" />
 
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-bold text-gray-800 dark:text-gray-100">
+          <h3 className="font-sora text-[13px] font-bold text-[var(--ink)]">
             Category Breakdown - {selectedChart === 'expense' ? 'Expenses' : 'Income'}
           </h3>
         </div>
@@ -304,20 +305,20 @@ export function MonthlyReportCard() {
              return (
               <div key={category.name}>
                 <div className="flex justify-between items-end text-[11px] mb-1.5">
-                  <span className="font-bold text-gray-700 dark:text-gray-300">{category.name}</span>
+                  <span className="font-bold text-[var(--ink)]">{category.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-500 dark:text-gray-400">₹{(category.amount || 0).toLocaleString('en-IN')}</span>
-                    <span className="font-bold text-gray-700 dark:text-gray-300">{Math.round(category.value)}%</span>
+                    <span className="font-bold text-[var(--ink-2)]">₹{(category.amount || 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[var(--ink)]">{Math.round(category.value)}%</span>
                   </div>
                 </div>
-                <div className="h-1 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden relative">
+                <div className="h-1 w-full bg-[var(--surface-2)] rounded-full overflow-hidden relative">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.round(category.value)}%`, backgroundColor: color }} />
                 </div>
               </div>
              )
           })}
           {(selectedChart === 'expense' ? expenseData : incomeData).length === 0 && (
-             <div className="text-xs text-center text-gray-400 py-4">No data for this month</div>
+             <div className="text-xs text-center text-[var(--ink-3)] py-4">No data for this month</div>
           )}
         </div>
 

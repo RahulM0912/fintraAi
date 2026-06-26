@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, MessageSquare } from "lucide-react";
+import { X, MessageSquare, Sparkles } from "lucide-react";
 import { useChat } from "@/lib/chat/useChat";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
@@ -44,7 +44,7 @@ export function AiAssistant() {
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Open AI assistant"
-          className="cursor-pointer fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300"
+          className="cursor-pointer fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white shadow-lg shadow-[var(--brand)]/30 transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-[var(--brand)]/30"
         >
           <MessageSquare className="h-6 w-6" />
         </button>
@@ -60,8 +60,8 @@ export function AiAssistant() {
           <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l bg-background shadow-2xl sm:w-[400px]">
             <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500">
-                  <span className="text-sm font-bold text-white">✨</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)]">
+                  <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <h2 className="text-sm font-semibold">Fintra AI</h2>

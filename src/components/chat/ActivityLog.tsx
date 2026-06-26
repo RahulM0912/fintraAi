@@ -19,8 +19,8 @@ export function ActivityLog({ items, size = "md" }: Props) {
     ? "mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
     : "mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
   const dotClass = isSm
-    ? "inline-block h-1 w-1 animate-pulse rounded-full bg-indigo-500"
-    : "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500";
+    ? "inline-block h-1 w-1 animate-pulse rounded-full bg-[var(--brand)]"
+    : "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand)]";
   const listClass = isSm ? "flex flex-col gap-1" : "flex flex-col gap-1.5";
   const itemClass = isSm
     ? "flex items-center gap-1.5 text-xs"
@@ -37,7 +37,7 @@ export function ActivityLog({ items, size = "md" }: Props) {
         {items.map((item) => (
           <div key={item.id} className={itemClass}>
             {item.status === "active" ? (
-              <Loader2 className={`${iconClass} animate-spin text-indigo-500`} />
+              <Loader2 className={`${iconClass} animate-spin text-[var(--brand)]`} />
             ) : (
               <CheckCircle2 className={`${iconClass} text-green-500`} />
             )}

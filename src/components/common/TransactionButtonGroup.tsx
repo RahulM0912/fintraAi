@@ -22,7 +22,7 @@ export default function TransactionButtonGroup() {
       <div className="flex items-center gap-2">
         <Button
           onClick={() => setOpen(true)}
-          className="bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm"
+          className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm hover:-translate-y-px transition-all duration-200"
         >
           <Plus className="mr-2 h-4 w-4" /> Add Transaction
         </Button>

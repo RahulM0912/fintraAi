@@ -2,7 +2,10 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
+
+const cardBase =
+  "bg-[var(--surface)] border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] relative overflow-hidden";
 
 export default function SummaryCard() {
   const {
@@ -31,7 +34,8 @@ export default function SummaryCard() {
     return { intPart, fracPart };
   };
 
-  const balanceParts = formatCurrencyParts(netBalance ?? 0);
+  const balance = netBalance ?? 0;
+  const balanceParts = formatCurrencyParts(balance);
   const incomeFormatted = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(totalIncome ?? 0);
   const expenseFormatted = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(totalExpense ?? 0);
   const currentMonthStr = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(new Date()).toUpperCase();
@@ -40,7 +44,7 @@ export default function SummaryCard() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
         {/* Total Balance Skeleton */}
-        <Card className="md:col-span-6 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem]">
+        <Card className={`md:col-span-6 ${cardBase}`}>
           <CardContent className="p-8 h-full flex flex-col justify-center">
             <div className="flex items-center gap-2 mb-4">
               <Skeleton className="h-4 w-24" />
@@ -51,10 +55,10 @@ export default function SummaryCard() {
         </Card>
 
         {/* Total Income Skeleton */}
-        <Card className="md:col-span-3 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem]">
+        <Card className={`md:col-span-3 ${cardBase}`}>
           <CardContent className="p-6 flex flex-col h-full justify-center">
             <div className="flex items-center gap-2 mb-3">
-              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-9 w-9 rounded-xl" />
               <Skeleton className="h-3 w-20" />
             </div>
             <Skeleton className="h-8 w-32" />
@@ -62,10 +66,10 @@ export default function SummaryCard() {
         </Card>
 
         {/* Total Expenses Skeleton */}
-        <Card className="md:col-span-3 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem]">
+        <Card className={`md:col-span-3 ${cardBase}`}>
           <CardContent className="p-6 flex flex-col h-full justify-center">
             <div className="flex items-center gap-2 mb-3">
-              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-9 w-9 rounded-xl" />
               <Skeleton className="h-3 w-24" />
             </div>
             <Skeleton className="h-8 w-32" />
@@ -77,42 +81,56 @@ export default function SummaryCard() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-      {/* Total Balance Card (Larger) */}
-      <Card className="md:col-span-6 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] relative overflow-hidden">
-        <CardContent className="p-8 h-full flex flex-col justify-center">
+      {/* Total Balance Card (hero) */}
+      <Card className={`md:col-span-6 ${cardBase}`}>
+        {/* Brand glow accent */}
+        <div
+          className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full"
+          style={{ background: "radial-gradient(circle, var(--brand-glow) 0%, transparent 70%)" }}
+        />
+        <CardContent className="p-8 h-full flex flex-col justify-center relative">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-[13px] font-medium text-gray-500">Total Balance</h3>
-            <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase bg-gray-50 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{currentMonthStr}</span>
+            <div className="h-7 w-7 rounded-lg bg-[var(--brand-bg)] border border-[var(--brand-border)] flex items-center justify-center">
+              <Wallet className="h-3.5 w-3.5 text-[var(--brand)]" />
+            </div>
+            <h3 className="text-[13px] font-medium text-[var(--ink-2)]">Total Balance</h3>
+            <span className="text-[10px] font-bold tracking-widest text-[var(--ink-3)] uppercase bg-[var(--surface-2)] px-2 py-0.5 rounded-full">{currentMonthStr}</span>
           </div>
           <div className="flex items-baseline mt-2">
-            <span className="text-4xl font-bold text-gray-900 dark:text-white">₹{balanceParts.intPart}</span>
-            <span className="text-xl font-bold text-gray-400">.{balanceParts.fracPart}</span>
+            <span className={`font-sora text-4xl font-bold ${balance < 0 ? "text-[var(--neg)]" : "text-[var(--ink)]"}`}>
+              {balance < 0 ? "-" : ""}₹{balanceParts.intPart.replace("-", "")}
+            </span>
+            <span className="font-sora text-xl font-bold text-[var(--ink-3)]">.{balanceParts.fracPart}</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Total Income Card */}
-      <Card className="md:col-span-3 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] relative overflow-hidden">
+      <Card className={`md:col-span-3 ${cardBase}`}>
         <CardContent className="p-6 flex flex-col h-full justify-center">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ArrowDownRight className="h-4 w-4 text-[#16a34a]" />
-              <h3 className="text-[11px] font-bold text-[#16a34a] tracking-wider uppercase">Total Income</h3>
+              <div className="h-9 w-9 rounded-xl bg-[var(--pos-bg)] flex items-center justify-center">
+                <ArrowDownRight className="h-4 w-4 text-[var(--pos)]" />
+              </div>
+              <h3 className="text-[11px] font-bold text-[var(--pos)] tracking-wider uppercase">Total Income</h3>
             </div>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">₹{incomeFormatted}</p>
+            <p className="font-sora text-2xl font-bold text-[var(--ink)]">₹{incomeFormatted}</p>
           </div>
         </CardContent>
       </Card>
 
       {/* Total Expenses Card */}
-      <Card className="md:col-span-3 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem] relative overflow-hidden">
+      <Card className={`md:col-span-3 ${cardBase}`}>
         <CardContent className="p-6 flex flex-col h-full justify-center">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ArrowUpRight className="h-4 w-4 text-[#dc2626]" />
-              <h3 className="text-[11px] font-bold text-[#dc2626] tracking-wider uppercase">Total Expenses</h3>
+              <div className="h-9 w-9 rounded-xl bg-[var(--neg-bg)] flex items-center justify-center">
+                <ArrowUpRight className="h-4 w-4 text-[var(--neg)]" />
+              </div>
+              <h3 className="text-[11px] font-bold text-[var(--neg)] tracking-wider uppercase">Total Expenses</h3>
             </div>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">₹{expenseFormatted}</p>
+            <p className="font-sora text-2xl font-bold text-[var(--ink)]">₹{expenseFormatted}</p>
           </div>
         </CardContent>
       </Card>

@@ -74,6 +74,13 @@ export default function TransactionsPage() {
     fetchTransactions()
   }, [fetchTransactions])
 
+  // Refresh when a transaction is added elsewhere (quick-add palette, bottom-nav, AI)
+  useEffect(() => {
+    const handler = () => fetchTransactions()
+    window.addEventListener("transaction-added", handler)
+    return () => window.removeEventListener("transaction-added", handler)
+  }, [fetchTransactions])
+
   // When filters change, reset to page 1
   function handleTypeChange(t: string) {
     setType(t)
@@ -95,7 +102,7 @@ export default function TransactionsPage() {
         {/* Mobile: button on top, full width */}
         <Button
           onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
-          className="sm:hidden w-full bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm"
+          className="sm:hidden w-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm transition-colors duration-200"
         >
           <Plus className="mr-2 h-4 w-4" /> Add Transaction
         </Button>
@@ -113,7 +120,7 @@ export default function TransactionsPage() {
 
           <Button
             onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
-            className="hidden sm:flex bg-[#4338ca] hover:bg-[#3730a3] text-white rounded-lg px-5 shadow-sm shrink-0"
+            className="hidden sm:flex bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm transition-colors duration-200 shrink-0"
           >
             <Plus className="mr-2 h-4 w-4" /> Add Transaction
           </Button>

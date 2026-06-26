@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import { MarkdownContent } from "@/components/common/MarkdownContent";
 import type { ActivityItem, InterruptResume, Message } from "@/lib/chat/types";
 import { ActivityLog } from "./ActivityLog";
@@ -31,13 +31,13 @@ export function MessageBubble({
   return (
     <div className={`flex items-start ${isCompact ? "gap-2" : "gap-3"} ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
       <div
-        className={`flex ${avatarSize} shrink-0 items-center justify-center rounded-full text-sm ${
+        className={`flex ${avatarSize} shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
           message.role === "user"
             ? "bg-primary text-primary-foreground"
-            : "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
+            : "bg-[var(--brand)] text-white"
         }`}
       >
-        {message.role === "user" ? "U" : "✨"}
+        {message.role === "user" ? "U" : <Sparkles className="h-4 w-4" />}
       </div>
 
       <div

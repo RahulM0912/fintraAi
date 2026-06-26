@@ -25,7 +25,7 @@ export function UserMenu() {
         <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Avatar className="h-8 w-8 cursor-pointer">
             <AvatarImage src={user?.imageUrl} alt={user?.fullName ?? "User"} />
-            <AvatarFallback className="bg-purple-600 text-white text-sm">
+            <AvatarFallback className="bg-[var(--brand)] text-white text-sm">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -37,7 +37,7 @@ export function UserMenu() {
         <div className="flex items-center gap-3 px-3 py-2">
           <Avatar className="h-9 w-9">
             <AvatarImage src={user?.imageUrl} alt={user?.fullName ?? "User"} />
-            <AvatarFallback className="bg-purple-600 text-white text-sm">
+            <AvatarFallback className="bg-[var(--brand)] text-white text-sm">
               {initials}
             </AvatarFallback>
           </Avatar>
