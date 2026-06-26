@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useTransactionStore } from "@/store/transactionStore"
-import { CalendarIcon, ChevronDown, DollarSign, Search, Tag } from "lucide-react"
+import { CalendarIcon, ChevronDown, IndianRupee, Search, Tag } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -34,9 +34,11 @@ type Props = {
   onSuccess?: (result: any) => void
   /** Pass to open in edit mode */
   transaction?: ExistingTransaction | null
+  /** Seed amount/description when opening in create mode (e.g. from quick-add) */
+  prefill?: { amount?: number; description?: string }
 }
 
-export function TransactionModal({ open, onOpenChange, type, onSuccess, transaction }: Props) {
+export function TransactionModal({ open, onOpenChange, type, onSuccess, transaction, prefill }: Props) {
   const isEditMode = !!transaction
 
   const [internalTxType, setInternalTxType] = useState<"income" | "expense">(type)
@@ -75,6 +77,16 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
       setSelectedDate(new Date(transaction.date))
     }
   }, [open, isEditMode, transaction])
+
+  // Create mode: sync the type prop on open (modal instance is reused globally),
+  // then seed any quick-add prefill (amount/description).
+  useEffect(() => {
+    if (open && !isEditMode) {
+      setInternalTxType(type)
+      if (prefill?.amount != null) setAmount(prefill.amount)
+      if (prefill?.description) setDescription(prefill.description)
+    }
+  }, [open, isEditMode, type, prefill])
 
   // Load categories whenever the modal opens or type toggles
   useEffect(() => {
@@ -189,7 +201,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
         <DialogHeader className="pb-0 sm:pb-1">
           <DialogTitle className="text-lg sm:text-2xl font-bold leading-tight">
             {isEditMode ? "Edit " : "Create a "}
-            <span className={isIncome ? "text-emerald-500" : "text-rose-500"}>
+            <span className={isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}>
               {isEditMode ? (isIncome ? "income" : "expense") : `new ${isIncome ? "income" : "expense"}`}
             </span>
             {" "}transaction
@@ -208,8 +220,8 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               onClick={() => { setInternalTxType("expense"); setCategoryId(null) }}
               className={`cursor-pointer flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 !isIncome
-                  ? "bg-white dark:bg-zinc-800 text-rose-500 shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  ? "bg-[var(--surface)] text-[var(--neg)] shadow-sm"
+                  : "bg-[var(--surface-2)] text-[var(--ink-2)] hover:text-[var(--ink)]"
               }`}
             >
               Expense
@@ -218,8 +230,8 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               onClick={() => { setInternalTxType("income"); setCategoryId(null) }}
               className={`cursor-pointer flex-1 text-sm font-semibold py-2 sm:py-2.5 transition-all ${
                 isIncome
-                  ? "bg-white dark:bg-zinc-800 text-emerald-600 shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                  ? "bg-[var(--surface)] text-[var(--pos)] shadow-sm"
+                  : "bg-[var(--surface-2)] text-[var(--ink-2)] hover:text-[var(--ink)]"
               }`}
             >
               Income
@@ -250,7 +262,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               </Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
+                  <IndianRupee className="h-4 w-4" />
                 </span>
                 <Input
                   type="number"
@@ -355,7 +367,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           <Button
             onClick={isEditMode ? handleEdit : handleCreate}
             disabled={isLoading}
-            className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-6"
+            className="flex-1 sm:flex-none bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
           >
             {isLoading
               ? isEditMode ? "Saving..." : "Creating..."

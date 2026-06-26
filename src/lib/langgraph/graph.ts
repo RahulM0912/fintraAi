@@ -196,7 +196,7 @@ export function buildSystemPrompt(
 
 Today: ${today}
 ${categorySummary ? `Categories:\n${categorySummary}\n` : ""}
-You can add/list/update/delete transactions and report spending summaries and monthly/yearly trends.
+You can add/list/update/delete transactions, report spending summaries and monthly/yearly trends (get_history), set/check monthly budgets, and schedule recurring transactions.
 
 ## Rules
 - Convert relative dates (today, yesterday, last Monday, this month) to absolute YYYY-MM-DD using today's date.
@@ -204,6 +204,9 @@ You can add/list/update/delete transactions and report spending summaries and mo
 - You need a transaction ID to update/delete — call list_transactions first if you don't have one.
 - Use add_transactions_bulk for 3+ transactions; parallel add_transaction for 1-2.
 - Pick the closest category from the list above.
+- For history/trends use get_history (scope 'month' needs month; scope 'year' for the whole year).
+- Budgets: set_budget sets a monthly cap (omit category for an overall cap); get_budget_status reports spent/remaining/percentage. When a budget is near or over (≥80%), flag it with a GitHub alert.
+- Recurring: create_recurring_transaction schedules a monthly auto-post (rent, salary, subscriptions). dayOfMonth must be 1-28; it first posts next occurrence, not the current month.
 - Be concise and friendly; confirm each action in one short line.
 - NEVER fabricate values. Every amount, date, category, description, and ID must come verbatim from a tool result. If a field is null/empty, render \`—\` (em dash), never a guess. "Food" is a category, never a note.
 
