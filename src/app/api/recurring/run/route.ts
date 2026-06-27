@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { lastDueOnOrBefore } from "@/lib/recurring";
 export const dynamic = "force-dynamic";
@@ -58,8 +58,9 @@ async function incYearHistory(
 // POST — materialize any due recurring rules into real transactions.
 // Idempotent: a rule only posts once per period, guarded by last_run_date.
 export async function POST() {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const userId = user.id;
 
   const db = createAdminClient();
   const today = new Date();

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useUser } from "@clerk/nextjs"
+import { useAuth } from "@/components/auth/AuthProvider"
+import { getUserDisplay } from "@/utils/userDisplay"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navbar/ThemeToggle"
@@ -10,18 +11,10 @@ import { RecurringSection } from "@/components/settings/RecurringSection"
 import { Sparkles, Download, KeyRound, Palette, UserRound } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user } = useUser()
+  const { user } = useAuth()
   const [manageOpen, setManageOpen] = useState(false)
 
-  const displayName =
-    user?.fullName || user?.firstName || user?.emailAddresses?.[0]?.emailAddress || "User"
-  const email = user?.emailAddresses?.[0]?.emailAddress ?? ""
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
+  const { displayName, email, avatarUrl, initials } = getUserDisplay(user)
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-24">
@@ -38,7 +31,7 @@ export default function SettingsPage() {
       <Section icon={UserRound} title="Profile">
         <div className="flex items-center gap-4">
           <Avatar className="h-12 w-12 rounded-xl shrink-0">
-            <AvatarImage src={user?.imageUrl} alt={displayName} className="rounded-xl" />
+            <AvatarImage src={avatarUrl} alt={displayName} className="rounded-xl" />
             <AvatarFallback className="bg-[var(--brand)] text-white rounded-xl font-semibold">
               {initials}
             </AvatarFallback>

@@ -3,13 +3,14 @@
 import { Menu, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { getUserDisplay } from "@/utils/userDisplay";
 import { useSidebar } from "@/components/sidebar/SidebarContext";
 import { useQuickAdd } from "@/components/common/QuickAddProvider";
 
 export function Header() {
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toggle } = useSidebar();
   const { openPalette } = useQuickAdd();
 
@@ -17,7 +18,7 @@ export function Header() {
   if (pathname.includes("transactions")) title = "Transactions";
   if (pathname.includes("settings")) title = "Settings";
 
-  const firstName = user?.firstName || user?.fullName?.split(" ")[0] || null;
+  const { firstName } = getUserDisplay(user);
 
   const greeting = (() => {
     const hour = new Date().getHours();

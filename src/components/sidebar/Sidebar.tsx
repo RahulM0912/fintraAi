@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LayoutGrid, CreditCard, MessageSquare, X, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { getUserDisplay } from "@/utils/userDisplay";
 import { ManageAccountModal } from "@/components/common/ManageAccountModal";
 import { useSidebar } from "@/components/sidebar/SidebarContext";
 
@@ -25,24 +26,11 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const [manageAccountOpen, setManageAccountOpen] = useState(false);
   const { isOpen, close } = useSidebar();
 
-  const displayName =
-    user?.fullName ||
-    user?.firstName ||
-    user?.emailAddresses?.[0]?.emailAddress ||
-    "User";
-
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const { displayName, email, avatarUrl, initials } = getUserDisplay(user);
 
   return (
     <aside
@@ -122,7 +110,7 @@ export function Sidebar() {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[var(--hairline)] cursor-pointer hover:bg-[var(--surface-2)] rounded-lg p-2 transition-colors -mx-2">
               <Avatar className="h-9 w-9 rounded-xl shrink-0">
-                <AvatarImage src={user?.imageUrl} alt={displayName} className="rounded-xl" />
+                <AvatarImage src={avatarUrl} alt={displayName} className="rounded-xl" />
                 <AvatarFallback className="bg-[var(--brand)] text-white rounded-xl text-sm font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -132,7 +120,7 @@ export function Sidebar() {
                   {displayName}
                 </span>
                 <span className="text-[10px] text-[var(--ink-2)] truncate">
-                  {user?.emailAddresses?.[0]?.emailAddress}
+                  {email}
                 </span>
               </div>
             </div>
@@ -146,7 +134,7 @@ export function Sidebar() {
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer text-red-500 hover:text-red-600 focus:text-red-600"
-              onClick={() => signOut(() => router.push("/"))}
+              onClick={() => signOut()}
             >
               <LogOut className="mr-2 h-4 w-4" /> Log out
             </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 export const dynamic = "force-dynamic";
 
@@ -20,8 +20,9 @@ function currentMonthRange() {
 
 // GET — list budgets for the current month with spent + percentage computed.
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   const db = createAdminClient();
   const { start, end, label } = currentMonthRange();
@@ -101,8 +102,9 @@ export async function GET() {
 
 // POST — create or update a budget. Body: { categoryId: string|null, amount: number }
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   let body: any;
   try {
@@ -156,8 +158,9 @@ export async function POST(req: Request) {
 
 // DELETE — remove a budget by id (?id=...).
 export async function DELETE(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return new Response("id is required", { status: 400 });

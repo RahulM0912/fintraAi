@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { lastDueOnOrBefore } from "@/lib/recurring";
 export const dynamic = "force-dynamic";
@@ -9,8 +9,9 @@ function unauthorized() {
 
 // GET — list the user's recurring rules with category info.
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   const db = createAdminClient();
   const { data, error } = await db
@@ -46,8 +47,9 @@ export async function GET() {
 // POST — create a recurring rule.
 // Body: { amount, type, categoryId, dayOfMonth, description? }
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   let body: any;
   try {
@@ -98,8 +100,9 @@ export async function POST(req: Request) {
 
 // PATCH — update a rule. Body: { id, amount?, dayOfMonth?, description?, active? }
 export async function PATCH(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   let body: any;
   try {
@@ -139,8 +142,9 @@ export async function PATCH(req: Request) {
 
 // DELETE — remove a rule (?id=...).
 export async function DELETE(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return new Response("id is required", { status: 400 });

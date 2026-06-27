@@ -1,9 +1,12 @@
-import { SignUp } from "@clerk/nextjs"
+import { Suspense } from "react";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
-      <SignUp forceRedirectUrl="/dashboard" />
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-zinc-950">
+      <Suspense>
+        <AuthForm mode="sign-up" />
+      </Suspense>
     </div>
-  )
+  );
 }
