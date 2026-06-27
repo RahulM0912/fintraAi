@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 export const dynamic = "force-dynamic";
 
@@ -70,8 +70,9 @@ async function incrementYearHistory(
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   let body: any;
   try { body = await req.json(); }
@@ -109,8 +110,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return unauthorized();
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
+  const userId = user.id;
 
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get("startDate");

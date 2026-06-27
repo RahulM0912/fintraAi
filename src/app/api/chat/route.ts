@@ -1,12 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createSSEStream } from "./sse";
 import { runChat, type ChatBody } from "./chatHandler";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const userId = user.id;
 
   let body: ChatBody;
   try {

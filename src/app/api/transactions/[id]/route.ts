@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 function parseDateParts(dateStr: string) {
@@ -100,8 +100,9 @@ export async function DELETE(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const userId = user.id;
 
   const { id: transactionId } = await context.params;
   const db = createAdminClient();
@@ -133,8 +134,9 @@ export async function PUT(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const userId = user.id;
 
   const { id: transactionId } = await context.params;
 

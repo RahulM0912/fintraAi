@@ -1,10 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const userId = user.id;
 
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get("startDate");

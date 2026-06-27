@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.0.12",
     "@langchain/core": "^1.1.40",
     "@langchain/google-genai": "^2.1.27",
     "@langchain/langgraph": "^1.2.8",
