@@ -115,7 +115,16 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
           body: JSON.stringify(body),
           signal: abort.signal,
         });
-        if (!response.ok) throw new Error(`Server error ${response.status}`);
+        if (!response.ok) {
+          let message = `Server error ${response.status}`;
+          try {
+            const data = await response.json();
+            if (data?.message) message = data.message;
+          } catch {
+            // non-JSON body — keep the generic message
+          }
+          throw new Error(message);
+        }
 
         for await (const event of parseSSE(response.body!.getReader())) {
           handleEvent(event, ctx);
@@ -124,12 +133,13 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
         const e = err as { name?: string; message?: string };
         if (e?.name === "AbortError") return;
         console.error("[useChat]", err);
-        toast.error("Something went wrong. Please try again.");
+        const message = e?.message || "Something went wrong. Please try again.";
+        toast.error(message);
         setMessages((prev) => [
           ...prev.slice(0, -1),
           {
             role: "ai",
-            content: "Sorry, something went wrong. Please try again.",
+            content: message,
             isStreaming: false,
           },
         ]);

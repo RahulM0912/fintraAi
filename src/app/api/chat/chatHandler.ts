@@ -2,11 +2,9 @@ import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages
 import { Command } from "@langchain/langgraph";
 import { fintraGraph, buildSystemPrompt } from "@/lib/langgraph/graph";
 import { createAdminClient } from "@/utils/supabase/admin";
-import {
-  DEFAULT_MODEL_CONFIG,
-  calculateCost,
-} from "@/lib/langgraph/types";
+import { calculateCost } from "@/lib/langgraph/types";
 import { summarizeHistory } from "@/lib/langgraph/summarize";
+import { consumeChatQuota, type EffectiveModel } from "@/lib/userSettings";
 import type { InterruptPayload, InterruptResume } from "@/lib/langgraph";
 import type { SSEEvent } from "./sse";
 
@@ -93,7 +91,8 @@ async function buildGraphInput(body: ChatBody): Promise<GraphInput> {
 export async function runChat(
   userId: string,
   body: ChatBody,
-  send: (event: SSEEvent) => void
+  send: (event: SSEEvent) => void,
+  model: EffectiveModel
 ): Promise<void> {
   const today = new Date().toISOString().split("T")[0];
   const input = await buildGraphInput(body);
@@ -107,8 +106,9 @@ export async function runChat(
       thread_id: body.threadId,
       userId,
       today,
-      modelProvider: DEFAULT_MODEL_CONFIG.provider,
-      modelName: DEFAULT_MODEL_CONFIG.modelName,
+      modelProvider: model.provider,
+      modelName: model.modelName,
+      apiKey: model.apiKey,
     },
   };
 
@@ -155,6 +155,17 @@ export async function runChat(
     }
   }
 
+  // Charge one managed message per fresh turn (resumes are part of the same
+  // logical message and stay free). Done after the model ran, so a hard failure
+  // before any call doesn't burn quota. Best-effort — never break the turn.
+  if (model.managed && !body.resume && body.messages) {
+    try {
+      await consumeChatQuota(userId);
+    } catch (err) {
+      console.error("[chat] quota consume failed", err);
+    }
+  }
+
   // After the run, check whether the graph paused on an interrupt.
   const state = await fintraGraph.getState({ configurable: { thread_id: body.threadId } });
   const pendingInterrupts = (state.tasks ?? [])
@@ -194,7 +205,7 @@ export async function runChat(
   }
 
   const cost = calculateCost(
-    DEFAULT_MODEL_CONFIG.modelName,
+    model.modelName,
     totalInputTokens,
     totalOutputTokens
   );

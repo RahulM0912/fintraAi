@@ -7,7 +7,7 @@ export interface ChatRequest {
   messages: ChatMessage[];
 }
 
-export type ModelProvider = "gemini" | "openrouter";
+export type ModelProvider = "gemini" | "openrouter" | "openai";
 
 export interface ModelConfig {
   provider: ModelProvider;
@@ -20,10 +20,15 @@ export const OPENROUTER_MODEL_PRICING: Record<
   string,
   { inputPerMillion: number; outputPerMillion: number }
 > = {
-  // GPT-4o family
+  // GPT-4o family (OpenRouter ids)
   "openai/gpt-4o-mini":                    { inputPerMillion: 0.15,  outputPerMillion: 0.60  },
   "openai/gpt-4o":                         { inputPerMillion: 2.50,  outputPerMillion: 10.00 },
   "openai/gpt-oss-20b":                    { inputPerMillion: 0.03,  outputPerMillion: 0.14  },
+  // Direct OpenAI ids (BYO openai provider)
+  "gpt-4o-mini":                           { inputPerMillion: 0.15,  outputPerMillion: 0.60  },
+  "gpt-4o":                                { inputPerMillion: 2.50,  outputPerMillion: 10.00 },
+  "gpt-4.1-mini":                          { inputPerMillion: 0.40,  outputPerMillion: 1.60  },
+  "gpt-4.1":                               { inputPerMillion: 2.00,  outputPerMillion: 8.00  },
   // Claude family
   "anthropic/claude-haiku-4-5":            { inputPerMillion: 0.80,  outputPerMillion: 4.00  },
   "anthropic/claude-sonnet-4-5":           { inputPerMillion: 3.00,  outputPerMillion: 15.00 },

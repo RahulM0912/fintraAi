@@ -24,14 +24,20 @@ const toolNode = new ToolNode(financeTools);
 
 // ─── Model factory ─────────────────────────────────────────────────────────────
 
-export function createModel(provider: ModelProvider, modelName: string) {
+// `apiKey` lets a user bring their own key; when omitted we fall back to the
+// managed server key from the environment.
+export function createModel(
+  provider: ModelProvider,
+  modelName: string,
+  apiKey?: string
+) {
   switch (provider) {
     case "openrouter":
       return new ChatOpenAI({
         model: modelName,
         temperature: 0.1,
         maxRetries: 1,
-        apiKey: process.env.OPENROUTER_API_KEY ?? undefined,
+        apiKey: apiKey ?? process.env.OPENROUTER_API_KEY ?? undefined,
         configuration: {
           baseURL: "https://openrouter.ai/api/v1",
           defaultHeaders: {
@@ -40,6 +46,14 @@ export function createModel(provider: ModelProvider, modelName: string) {
           },
         },
       });
+    case "openai":
+      // Direct OpenAI — default baseURL (api.openai.com).
+      return new ChatOpenAI({
+        model: modelName,
+        temperature: 0.1,
+        maxRetries: 1,
+        apiKey: apiKey ?? process.env.OPENAI_API_KEY ?? undefined,
+      });
     case "gemini":
     default:
       return new ChatGoogleGenerativeAI({
@@ -47,6 +61,7 @@ export function createModel(provider: ModelProvider, modelName: string) {
         temperature: 0.1,
         maxRetries: 1,
         apiKey:
+          apiKey ??
           process.env.GOOGLE_API_KEY ??
           process.env.GOOGLE_GEMINI_API_KEY ??
           undefined,
@@ -66,8 +81,9 @@ async function agentNode(
   const modelName =
     (config.configurable?.modelName as string) ??
     DEFAULT_MODEL_CONFIG.modelName;
+  const apiKey = config.configurable?.apiKey as string | undefined;
 
-  const llm = createModel(provider, modelName).bindTools(financeTools);
+  const llm = createModel(provider, modelName, apiKey).bindTools(financeTools);
   const response = await llm.invoke(state.messages, config);
   return { messages: [response] };
 }

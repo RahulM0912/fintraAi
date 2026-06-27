@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navbar/ThemeToggle"
 import { ManageAccountModal } from "@/components/common/ManageAccountModal"
 import { RecurringSection } from "@/components/settings/RecurringSection"
-import { Sparkles, Download, KeyRound, Palette, UserRound } from "lucide-react"
+import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
+import { Download, Palette, UserRound } from "lucide-react"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -58,20 +59,7 @@ export default function SettingsPage() {
       </Section>
 
       {/* AI */}
-      <Section icon={Sparkles} title="AI assistant">
-        <Row title="Model" desc="Fintra runs a managed model with a free monthly quota.">
-          <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs font-medium text-[var(--ink-2)]">
-            GPT-OSS 120B · Managed
-          </span>
-        </Row>
-        <Divider />
-        <Row
-          title="Bring your own key"
-          desc="Use your own OpenRouter or Gemini key for unlimited usage on any model."
-        >
-          <SoonBadge icon={KeyRound} />
-        </Row>
-      </Section>
+      <AiSettingsSection />
 
       {/* Recurring */}
       <RecurringSection />
@@ -128,10 +116,6 @@ function Row({
       <div className="shrink-0">{children}</div>
     </div>
   )
-}
-
-function Divider() {
-  return <div className="my-4 h-px bg-[var(--hairline)]" />
 }
 
 function SoonBadge({ icon: Icon }: { icon: React.ComponentType<{ className?: string }> }) {
