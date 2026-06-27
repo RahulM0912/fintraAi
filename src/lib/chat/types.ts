@@ -62,8 +62,10 @@ export const TOOL_STATUS_LABELS: Record<string, string> = {
   delete_transaction: "Deleting transaction...",
   get_spending_summary: "Analyzing spending...",
   get_categories: "Loading categories...",
-  get_monthly_history: "Fetching monthly history...",
-  get_yearly_history: "Fetching yearly data...",
+  get_history: "Fetching history...",
+  set_budget: "Updating budget...",
+  get_budget_status: "Checking budgets...",
+  create_recurring_transaction: "Scheduling recurring...",
   request_transaction_selection: "Waiting for your selection...",
   request_destructive_confirmation: "Waiting for your confirmation...",
   request_large_amount_confirmation: "Waiting for your confirmation...",
@@ -74,6 +76,7 @@ export const MUTATING_TOOLS = new Set([
   "add_transactions_bulk",
   "update_transaction",
   "delete_transaction",
+  "set_budget",
 ]);
 
 export interface UsageInfo {

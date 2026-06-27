@@ -249,7 +249,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
 
   return (
     <>
-      <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none overflow-hidden">
         {tableHeader}
 
         {/* Loading skeletons */}
@@ -281,14 +281,14 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
           return (
             <div key={tx.id} className="relative border-b last:border-0 hover:bg-muted/20 transition-colors">
               {/* Income/expense accent bar */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-[#16a34a]" : "bg-[#dc2626]"}`} />
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-[var(--pos)]" : "bg-[var(--neg)]"}`} />
 
               {/* ── Mobile card layout (< md) ── */}
               <div className="md:hidden px-4 py-3.5 pl-5">
                 {/* Row 1: icon + category name | amount */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${isIncome ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted dark:bg-muted/50"}`}>
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${isIncome ? "bg-[var(--pos-bg)]" : "bg-[var(--surface-2)]"}`}>
                       {tx.category.icon}
                     </div>
                     <div className="min-w-0">
@@ -296,8 +296,8 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                       <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{tx.type}</p>
                     </div>
                   </div>
-                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-[#16a34a]" : "text-[#dc2626]"}`}>
-                    {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
+                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
+                    {isIncome ? "+" : "-"}₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
@@ -339,12 +339,12 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
               <div className={`hidden md:grid ${COLS} px-6 py-4 items-center gap-0`}>
                 {/* Category */}
                 <div className="flex items-center gap-3 pl-1">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${isIncome ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted dark:bg-muted/50"}`}>
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${isIncome ? "bg-[var(--pos-bg)]" : "bg-[var(--surface-2)]"}`}>
                     {tx.category.icon}
                   </div>
                   <div>
                     <p className="font-medium text-sm leading-tight">{tx.category.name}</p>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{tx.category.name}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{tx.type}</p>
                   </div>
                 </div>
 
@@ -363,8 +363,8 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                 </div>
 
                 {/* Amount */}
-                <div className={`font-semibold text-sm text-right ${isIncome ? "text-[#16a34a]" : "text-[#dc2626]"}`}>
-                  {isIncome ? "+" : "-"}${tx.amount.toFixed(2)}
+                <div className={`font-semibold text-sm text-right ${isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
+                  {isIncome ? "+" : "-"}₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
 
                 {/* Actions */}

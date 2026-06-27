@@ -3,6 +3,7 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { z } from "zod";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { hitlTools } from "./hitlTools";
+import { lastDueOnOrBefore, nextDueAfter, ordinal } from "@/lib/recurring";
 
 // ─── Internal types ────────────────────────────────────────────────────────────
 
@@ -611,79 +612,59 @@ export const getSpendingSummaryToolDef = tool(
   }
 );
 
-// ─── Tool: get_monthly_history ─────────────────────────────────────────────────
+// ─── Tool: get_history (merged month + year) ───────────────────────────────────
 
-export const getMonthlyHistoryToolDef = tool(
+export const getHistoryToolDef = tool(
   async (
-    { year, month }: { year: number; month: number },
+    { scope, year, month }: { scope: "month" | "year"; year: number; month?: number },
     config?: RunnableConfig
   ): Promise<string> => {
     const userId = (config as any)?.configurable?.userId as string | undefined;
     if (!userId) return "Error: Not authenticated";
 
     const db = createAdminClient();
-    const { data, error } = await db
-      .from("month_history")
-      .select("day, income, expense")
-      .eq("user_id", userId)
-      .eq("month", month)
-      .eq("year", year)
-      .order("day");
 
-    if (error) return `Error: ${error.message}`;
+    if (scope === "month") {
+      if (!month) return "Error: month is required when scope is 'month'";
+      const { data, error } = await db
+        .from("month_history")
+        .select("day, income, expense")
+        .eq("user_id", userId)
+        .eq("month", month)
+        .eq("year", year)
+        .order("day");
+      if (error) return `Error: ${error.message}`;
 
-    const days = (data ?? []).map((r) => ({
-      day: r.day,
-      income: Number(r.income),
-      expense: Number(r.expense),
-      net: Number(r.income) - Number(r.expense),
-    }));
+      const days = (data ?? []).map((r) => ({
+        day: r.day,
+        income: Number(r.income),
+        expense: Number(r.expense),
+        net: Number(r.income) - Number(r.expense),
+      }));
+      const totalIncome = days.reduce((s, d) => s + d.income, 0);
+      const totalExpense = days.reduce((s, d) => s + d.expense, 0);
+      const peakExpense = [...days].sort((a, b) => b.expense - a.expense)[0] ?? null;
+      const peakIncome = [...days].sort((a, b) => b.income - a.income)[0] ?? null;
 
-    const totalIncome = days.reduce((s, d) => s + d.income, 0);
-    const totalExpense = days.reduce((s, d) => s + d.expense, 0);
-    const peakExpense = [...days].sort((a, b) => b.expense - a.expense)[0] ?? null;
-    const peakIncome = [...days].sort((a, b) => b.income - a.income)[0] ?? null;
+      return JSON.stringify({
+        scope,
+        year,
+        month,
+        totalIncome,
+        totalExpense,
+        netBalance: totalIncome - totalExpense,
+        peakExpenseDay: peakExpense,
+        peakIncomeDay: peakIncome,
+        days,
+      });
+    }
 
-    return JSON.stringify({
-      year,
-      month,
-      totalIncome,
-      totalExpense,
-      netBalance: totalIncome - totalExpense,
-      peakExpenseDay: peakExpense,
-      peakIncomeDay: peakIncome,
-      days,
-    });
-  },
-  {
-    name: "get_monthly_history",
-    description:
-      "Get daily income and expense breakdown for a specific month. Useful for trend analysis within a month.",
-    schema: z.object({
-      year: z.number().describe("Year e.g. 2024"),
-      month: z.number().min(1).max(12).describe("Month 1-12"),
-    }),
-  }
-);
-
-// ─── Tool: get_yearly_history ──────────────────────────────────────────────────
-
-export const getYearlyHistoryToolDef = tool(
-  async (
-    { year }: { year: number },
-    config?: RunnableConfig
-  ): Promise<string> => {
-    const userId = (config as any)?.configurable?.userId as string | undefined;
-    if (!userId) return "Error: Not authenticated";
-
-    const db = createAdminClient();
     const { data, error } = await db
       .from("year_history")
       .select("month, income, expense")
       .eq("user_id", userId)
       .eq("year", year)
       .order("month");
-
     if (error) return `Error: ${error.message}`;
 
     const months = (data ?? []).map((r) => ({
@@ -692,13 +673,13 @@ export const getYearlyHistoryToolDef = tool(
       expense: Number(r.expense),
       net: Number(r.income) - Number(r.expense),
     }));
-
     const totalIncome = months.reduce((s, m) => s + m.income, 0);
     const totalExpense = months.reduce((s, m) => s + m.expense, 0);
     const bestMonth = [...months].sort((a, b) => b.net - a.net)[0] ?? null;
     const worstMonth = [...months].sort((a, b) => a.net - b.net)[0] ?? null;
 
     return JSON.stringify({
+      scope,
       year,
       totalIncome,
       totalExpense,
@@ -709,11 +690,246 @@ export const getYearlyHistoryToolDef = tool(
     });
   },
   {
-    name: "get_yearly_history",
+    name: "get_history",
     description:
-      "Get monthly income and expense breakdown for an entire year. Useful for year-over-year analysis.",
+      "Get income/expense history. scope='month' returns a daily breakdown for one month (requires month); scope='year' returns a monthly breakdown for the whole year. Useful for trend analysis.",
     schema: z.object({
+      scope: z
+        .enum(["month", "year"])
+        .describe("'month' for daily breakdown, 'year' for monthly breakdown"),
       year: z.number().describe("Year e.g. 2024"),
+      month: z
+        .number()
+        .min(1)
+        .max(12)
+        .optional()
+        .describe("Month 1-12, required when scope is 'month'"),
+    }),
+  }
+);
+
+// ─── Budget helpers ────────────────────────────────────────────────────────────
+
+function currentMonthBounds() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    start: `${y}-${pad(m + 1)}-01`,
+    end: `${y}-${pad(m + 1)}-${pad(new Date(y, m + 1, 0).getDate())}`,
+    label: `${y}-${pad(m + 1)}`,
+  };
+}
+
+// ─── Tool: set_budget ──────────────────────────────────────────────────────────
+
+export const setBudgetToolDef = tool(
+  async (
+    { categoryName, amount }: { categoryName?: string; amount: number },
+    config?: RunnableConfig
+  ): Promise<string> => {
+    const userId = (config as any)?.configurable?.userId as string | undefined;
+    if (!userId) return "Error: Not authenticated";
+    if (!amount || amount <= 0) return "Error: amount must be greater than 0";
+
+    const db = createAdminClient();
+
+    let categoryId: string | null = null;
+    let label = "overall";
+    if (categoryName) {
+      const cat = await resolveCategoryId(db, categoryName, "expense");
+      if (!cat) {
+        const { data: cats } = await db
+          .from("categories")
+          .select("name")
+          .eq("type", "expense");
+        return `Expense category "${categoryName}" not found. Available: ${cats?.map((c) => c.name).join(", ") ?? "none"}`;
+      }
+      categoryId = cat.id;
+      label = cat.name;
+    }
+
+    let existingQuery = db.from("budgets").select("id").eq("user_id", userId);
+    existingQuery = categoryId
+      ? existingQuery.eq("category_id", categoryId)
+      : existingQuery.is("category_id", null);
+    const { data: existing } = await existingQuery.maybeSingle();
+
+    if (existing) {
+      const { error } = await db
+        .from("budgets")
+        .update({ amount, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      if (error) return `Error: ${error.message}`;
+    } else {
+      const { error } = await db
+        .from("budgets")
+        .insert({ user_id: userId, category_id: categoryId, amount });
+      if (error) return `Error: ${error.message}`;
+    }
+
+    return JSON.stringify({
+      success: true,
+      message: `Set ${label} monthly budget to ₹${amount}`,
+    });
+  },
+  {
+    name: "set_budget",
+    description:
+      "Set or update a monthly spending budget. Omit categoryName for an overall (all-spending) budget, or pass an expense category name for a per-category budget.",
+    schema: z.object({
+      categoryName: z
+        .string()
+        .optional()
+        .describe("Expense category name, or omit for an overall budget"),
+      amount: z.number().min(1).describe("Monthly budget amount in rupees (₹)"),
+    }),
+  }
+);
+
+// ─── Tool: get_budget_status ───────────────────────────────────────────────────
+
+export const getBudgetStatusToolDef = tool(
+  async (_args: Record<string, never>, config?: RunnableConfig): Promise<string> => {
+    const userId = (config as any)?.configurable?.userId as string | undefined;
+    if (!userId) return "Error: Not authenticated";
+
+    const db = createAdminClient();
+    const { start, end, label } = currentMonthBounds();
+
+    const [{ data: budgets, error: bErr }, { data: txns, error: tErr }] =
+      await Promise.all([
+        db
+          .from("budgets")
+          .select("category_id, amount, categories(name)")
+          .eq("user_id", userId),
+        db
+          .from("transactions")
+          .select("amount, category_id")
+          .eq("user_id", userId)
+          .eq("type", "expense")
+          .gte("date", start)
+          .lte("date", end),
+      ]);
+    if (bErr || tErr) return `Error: ${(bErr ?? tErr)?.message}`;
+
+    const spentBy = new Map<string, number>();
+    let totalExpense = 0;
+    for (const t of txns ?? []) {
+      const a = Number(t.amount);
+      totalExpense += a;
+      if (t.category_id) spentBy.set(t.category_id, (spentBy.get(t.category_id) ?? 0) + a);
+    }
+
+    if (!budgets?.length) {
+      return JSON.stringify({
+        month: label,
+        hasBudgets: false,
+        totalExpense,
+        message: "No budgets set yet.",
+      });
+    }
+
+    let overall: Record<string, number> | null = null;
+    const categories: Record<string, string | number>[] = [];
+    for (const b of budgets) {
+      const amount = Number(b.amount);
+      if (!b.category_id) {
+        overall = {
+          amount,
+          spent: totalExpense,
+          remaining: amount - totalExpense,
+          percentage: amount > 0 ? Math.round((totalExpense / amount) * 100) : 0,
+        };
+        continue;
+      }
+      const cat = Array.isArray(b.categories) ? b.categories[0] : b.categories;
+      const spent = spentBy.get(b.category_id) ?? 0;
+      categories.push({
+        category: (cat as any)?.name ?? "Unknown",
+        amount,
+        spent,
+        remaining: amount - spent,
+        percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+      });
+    }
+    categories.sort((a, b) => (b.percentage as number) - (a.percentage as number));
+
+    return JSON.stringify({ month: label, hasBudgets: true, overall, categories });
+  },
+  {
+    name: "get_budget_status",
+    description:
+      "Get the user's current-month budget status: each budget with amount, spent, remaining, and percentage used. Call when the user asks about budgets, limits, or how much they can still spend.",
+    schema: z.object({}),
+  }
+);
+
+// ─── Tool: create_recurring_transaction ────────────────────────────────────────
+
+export const createRecurringTransactionToolDef = tool(
+  async (
+    {
+      amount,
+      type,
+      categoryName,
+      dayOfMonth,
+      description,
+    }: {
+      amount: number;
+      type: TransactionType;
+      categoryName: string;
+      dayOfMonth: number;
+      description?: string;
+    },
+    config?: RunnableConfig
+  ): Promise<string> => {
+    const userId = (config as any)?.configurable?.userId as string | undefined;
+    if (!userId) return "Error: Not authenticated";
+    if (!amount || amount <= 0) return "Error: amount must be greater than 0";
+    if (dayOfMonth < 1 || dayOfMonth > 28)
+      return "Error: dayOfMonth must be between 1 and 28";
+
+    const db = createAdminClient();
+    const category = await resolveCategoryId(db, categoryName, type);
+    if (!category) {
+      const { data: cats } = await db
+        .from("categories")
+        .select("name")
+        .eq("type", type);
+      return `Category "${categoryName}" not found for ${type}. Available: ${cats?.map((c) => c.name).join(", ") ?? "none"}`;
+    }
+
+    const lastRun = lastDueOnOrBefore(new Date(), dayOfMonth);
+
+    const { error } = await db.from("recurring_rules").insert({
+      user_id: userId,
+      category_id: category.id,
+      amount: Number(amount),
+      type,
+      description: description ?? null,
+      day_of_month: dayOfMonth,
+      last_run_date: lastRun,
+    });
+    if (error) return `Error: ${error.message}`;
+
+    const next = nextDueAfter(lastRun, dayOfMonth);
+    return JSON.stringify({
+      success: true,
+      message: `Scheduled ${type} of ₹${amount} in ${category.name} on the ${ordinal(dayOfMonth)} of each month. First auto-post: ${next}.`,
+    });
+  },
+  {
+    name: "create_recurring_transaction",
+    description:
+      "Schedule a transaction to auto-post once a month (rent, salary, subscriptions). It first posts on the next occurrence of the given day — it does not back-post the current month. dayOfMonth must be 1-28.",
+    schema: z.object({
+      amount: z.number().min(1).describe("Amount in rupees (₹)"),
+      type: z.enum(["income", "expense"]),
+      categoryName: z.string().describe("Category name, fuzzy-matched"),
+      dayOfMonth: z.number().min(1).max(28).describe("Day of month to post on, 1-28"),
+      description: z.string().optional(),
     }),
   }
 );
@@ -730,8 +946,10 @@ export const financeTools = [
   updateTransactionToolDef,
   deleteTransactionToolDef,
   getSpendingSummaryToolDef,
-  getMonthlyHistoryToolDef,
-  getYearlyHistoryToolDef,
+  getHistoryToolDef,
+  setBudgetToolDef,
+  getBudgetStatusToolDef,
+  createRecurringTransactionToolDef,
   ...hitlTools,
 ];
 
@@ -741,4 +959,5 @@ export const MUTATING_TOOL_NAMES = new Set([
   "add_transactions_bulk",
   "update_transaction",
   "delete_transaction",
+  "set_budget",
 ]);

@@ -22,7 +22,7 @@ export function TransactionPicker({ data, onResolve, disabled }: Props) {
   const accent =
     data.action === "delete"
       ? "border-destructive/40 bg-destructive/5"
-      : "border-indigo-500/40 bg-indigo-500/5";
+      : "border-[var(--brand)]/40 bg-[var(--brand)]/5";
 
   return (
     <div className={`mt-3 rounded-xl border-2 ${accent} p-3`}>

@@ -7,6 +7,7 @@ import { useDashboardStore } from "@/store/dashboardStore"
 import SummaryCard from "@/components/dashboard/SummaryCard"
 import { RecentTransactionsCard } from "@/components/dashboard/RecentTransactionsCard"
 import { MonthlyReportCard } from "@/components/dashboard/MonthlyReportCard"
+import { BudgetCard } from "@/components/dashboard/BudgetCard"
 
 export default function Dashboard() {
   const { fetchAllCategories } = useTransactionStore()
@@ -31,16 +32,20 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto min-h-full pb-16">
       <section>
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <h2 className="text-[22px] font-bold text-[#1f2937] dark:text-gray-100">Overview</h2>
+        <div className="flex items-end justify-between mb-5 gap-4 flex-wrap">
+          <div>
+            <h1 className="font-sora text-[26px] font-bold tracking-tight text-[var(--ink)]">Overview</h1>
+            <p className="text-sm text-[var(--ink-2)] mt-0.5">Here&apos;s where your money stands this month.</p>
+          </div>
           <TransactionButtonGroup />
         </div>
         <SummaryCard />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <RecentTransactionsCard />
+          <BudgetCard />
         </div>
         <div className="lg:col-span-1">
           <MonthlyReportCard />
