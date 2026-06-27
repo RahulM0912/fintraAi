@@ -65,7 +65,7 @@ export function AiAssistant() {
                 </div>
                 <div>
                   <h2 className="text-sm font-semibold">Fintra AI</h2>
-                  <p className="text-xs text-muted-foreground">Powered by Gemini</p>
+                  <p className="text-xs text-muted-foreground">Your finance copilot</p>
                 </div>
               </div>
               <Button

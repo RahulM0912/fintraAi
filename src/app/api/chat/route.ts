@@ -1,4 +1,9 @@
 import { getAuthUser } from "@/utils/supabase/auth";
+import {
+  getOrCreateSettings,
+  effectiveModel,
+  quotaStatus,
+} from "@/lib/userSettings";
 import { createSSEStream } from "./sse";
 import { runChat, type ChatBody } from "./chatHandler";
 
@@ -26,5 +31,24 @@ export async function POST(req: Request) {
     return new Response("Either `messages` or `resume` is required", { status: 400 });
   }
 
-  return createSSEStream((send) => runChat(userId, body, send));
+  const settings = await getOrCreateSettings(userId);
+  const model = effectiveModel(settings);
+
+  // Managed tier is metered. BYO-key users are unlimited. Resumes ride on the
+  // turn that already passed the gate, so we only check fresh turns.
+  if (model.managed && isFreshTurn) {
+    const quota = quotaStatus(settings);
+    if (quota.remaining <= 0) {
+      return Response.json(
+        {
+          error: "quota_exceeded",
+          message: `You've used all ${quota.limit} free messages this month. Add your own API key in Settings for unlimited chat.`,
+          quota,
+        },
+        { status: 429 }
+      );
+    }
+  }
+
+  return createSSEStream((send) => runChat(userId, body, send, model));
 }
