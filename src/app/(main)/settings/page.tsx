@@ -9,7 +9,8 @@ import { ThemeToggle } from "@/components/navbar/ThemeToggle"
 import { ManageAccountModal } from "@/components/common/ManageAccountModal"
 import { RecurringSection } from "@/components/settings/RecurringSection"
 import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
-import { Download, Palette, UserRound } from "lucide-react"
+import { DataSection } from "@/components/settings/DataSection"
+import { Palette, UserRound } from "lucide-react"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -65,11 +66,7 @@ export default function SettingsPage() {
       <RecurringSection />
 
       {/* Data */}
-      <Section icon={Download} title="Data">
-        <Row title="Export to CSV" desc="Download all your transactions as a spreadsheet.">
-          <SoonBadge icon={Download} />
-        </Row>
-      </Section>
+      <DataSection />
 
       <p className="text-center text-xs text-[var(--ink-3)] pt-2">Fintra · v0.1</p>
 
@@ -115,14 +112,5 @@ function Row({
       </div>
       <div className="shrink-0">{children}</div>
     </div>
-  )
-}
-
-function SoonBadge({ icon: Icon }: { icon: React.ComponentType<{ className?: string }> }) {
-  return (
-    <span className="flex items-center gap-1.5 rounded-full border border-[var(--hairline)] px-3 py-1 text-xs font-medium text-[var(--ink-3)]">
-      <Icon className="h-3.5 w-3.5" />
-      Coming soon
-    </span>
   )
 }

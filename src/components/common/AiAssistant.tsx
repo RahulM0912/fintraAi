@@ -38,6 +38,20 @@ export function AiAssistant() {
     await chat.send(value);
   };
 
+  // Let other parts of the app (e.g. the dashboard insight card) open the
+  // assistant and optionally seed it with a question.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const prompt = (e as CustomEvent<{ prompt?: string }>).detail?.prompt;
+      setIsOpen(true);
+      if (prompt) setTimeout(() => handleSend(prompt), 150);
+    };
+    window.addEventListener("open-assistant", onOpen);
+    return () => window.removeEventListener("open-assistant", onOpen);
+    // handleSend is stable enough for this fire-and-forget bridge
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <>
       {!isOpen && (
