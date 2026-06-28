@@ -8,6 +8,8 @@ import SummaryCard from "@/components/dashboard/SummaryCard"
 import { RecentTransactionsCard } from "@/components/dashboard/RecentTransactionsCard"
 import { MonthlyReportCard } from "@/components/dashboard/MonthlyReportCard"
 import { BudgetCard } from "@/components/dashboard/BudgetCard"
+import { TrendCard } from "@/components/dashboard/TrendCard"
+import { InsightCard } from "@/components/dashboard/InsightCard"
 
 export default function Dashboard() {
   const { fetchAllCategories } = useTransactionStore()
@@ -42,8 +44,11 @@ export default function Dashboard() {
         <SummaryCard />
       </section>
 
+      <InsightCard />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          <TrendCard />
           <RecentTransactionsCard />
           <BudgetCard />
         </div>
