@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { createModel } from "./graph";
+import { createModel, messageText } from "./graph";
 import { DEFAULT_MODEL_CONFIG, type ModelProvider } from "./types";
 
 // ─── Rolling conversation summary ───────────────────────────────────────────────
@@ -49,7 +49,7 @@ export async function summarizeHistory(
     new HumanMessage(payload),
   ]);
 
-  const text = typeof res.content === "string" ? res.content.trim() : "";
+  const text = messageText(res.content).trim();
   // Fall back to the prior summary if the model returned nothing useful.
   return text || priorSummary;
 }

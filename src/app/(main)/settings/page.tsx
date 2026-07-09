@@ -1,22 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import { useAuth } from "@/components/auth/AuthProvider"
-import { getUserDisplay } from "@/utils/userDisplay"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navbar/ThemeToggle"
-import { ManageAccountModal } from "@/components/common/ManageAccountModal"
+import { ProfileSection } from "@/components/settings/ProfileSection"
 import { RecurringSection } from "@/components/settings/RecurringSection"
 import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
 import { DataSection } from "@/components/settings/DataSection"
 import { LogOut } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth()
-  const [manageOpen, setManageOpen] = useState(false)
-
-  const { displayName, email, avatarUrl, initials } = getUserDisplay(user)
+  const { signOut } = useAuth()
 
   return (
     <div className="mx-auto max-w-3xl px-5 pt-6 pb-12 sm:px-8 lg:pt-12 lg:pb-16">
@@ -34,28 +27,8 @@ export default function SettingsPage() {
       </div>
 
       <div className="mt-0 space-y-10 lg:mt-10">
-        {/* Profile */}
-        <Section title="Profile">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12 shrink-0 rounded-full">
-              <AvatarImage src={avatarUrl} alt="" className="rounded-full" />
-              <AvatarFallback className="rounded-full bg-[var(--surface-2)] font-medium text-[var(--ink)]">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-[var(--ink)]">{displayName}</p>
-              <p className="truncate text-sm text-[var(--ink-3)]">{email}</p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setManageOpen(true)}
-              className="min-h-11 shrink-0"
-            >
-              Manage account
-            </Button>
-          </div>
-        </Section>
+        {/* Profile — account management lives inline here, the one home for it */}
+        <ProfileSection />
 
         {/* Appearance */}
         <Section title="Appearance">
@@ -86,8 +59,6 @@ export default function SettingsPage() {
       </div>
 
       <p className="pt-10 text-xs text-[var(--ink-3)]">Fintra · v0.1</p>
-
-      <ManageAccountModal open={manageOpen} onClose={() => setManageOpen(false)} />
     </div>
   )
 }

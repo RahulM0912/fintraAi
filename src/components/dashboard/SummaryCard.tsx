@@ -38,12 +38,12 @@ function Figure({
 }
 
 export default function SummaryCard() {
-  const { totalIncome, totalExpense, netBalance, isSummaryLoading } = useDashboardStore();
+  const { totalIncome, totalExpense, netBalance, hydrated } = useDashboardStore();
 
   const [isMounted, setIsMounted] = React.useState(false);
   React.useEffect(() => setIsMounted(true), []);
 
-  const isLoading = !isMounted || isSummaryLoading;
+  const isLoading = !isMounted || !hydrated;
   const balance = netBalance ?? 0;
   const monthName = new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date());
 

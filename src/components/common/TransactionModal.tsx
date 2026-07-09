@@ -246,11 +246,11 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Transaction description (optional)"
+              placeholder='What was it? e.g. "chai with Ravi" (optional)'
               className="rounded-xl"
             />
             <p className="text-xs text-muted-foreground hidden sm:block">
-              Keep it short — e.g. &quot;Freelance - Jan Invoice&quot;.
+              Skip it if the category already says enough — no need to repeat it.
             </p>
           </div>
 

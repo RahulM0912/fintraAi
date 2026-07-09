@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, setMonth, setYear } from "date-fns";
+import { useDashboardStore } from "@/store/dashboardStore";
 
 /* Category breakdown as a ranked bar list — one evergreen hue in tint
    steps (--chart-1..5), category names as direct labels. Replaces the
@@ -24,13 +25,18 @@ export function MonthlyReportCard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
-  const [reportData, setReportData] = useState<{incomeByCategory: any[], expenseByCategory: any[], total: any}>({
-    incomeByCategory: [], expenseByCategory: [], total: { totalIncome: 0, totalExpense: 0, netBalance: 0 }
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  // Only past months fetch on demand; the current month reads the store,
+  // which the page-level /api/dashboard request already hydrated.
+  const [pastMonthData, setPastMonthData] = useState<{incomeByCategory: any[], expenseByCategory: any[], total: any} | null>(null);
+  const [pastMonthLoading, setPastMonthLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const store = useDashboardStore();
+
   const now = new Date();
+  const isCurrentMonth =
+    currentDate.getFullYear() === now.getFullYear() &&
+    currentDate.getMonth() === now.getMonth();
   // Reports only exist up to the current month — block navigating into the future.
   const canGoNext =
     currentDate.getFullYear() < now.getFullYear() ||
@@ -46,28 +52,58 @@ export function MonthlyReportCard() {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || isCurrentMonth) return;
 
     const fetchMonthlyData = () => {
       const start = startOfMonth(currentDate);
       const end = endOfMonth(currentDate);
 
-      setIsLoading(true);
-      fetch(`/api/summary?startDate=${start.toISOString()}&endDate=${end.toISOString()}&_t=${Date.now()}`, { cache: 'no-store' })
+      setPastMonthLoading(true);
+      fetch(`/api/summary?startDate=${start.toISOString()}&endDate=${end.toISOString()}`)
         .then(res => {
           if (!res.ok) throw new Error(`${res.status}`);
           return res.json();
         })
-        .then(data => setReportData(data))
+        .then(data => setPastMonthData(data))
         .catch(console.error)
-        .finally(() => setIsLoading(false));
+        .finally(() => setPastMonthLoading(false));
     };
 
     fetchMonthlyData();
 
+    // Backdated adds can change a past month while it's on screen.
     window.addEventListener("transaction-added", fetchMonthlyData);
     return () => window.removeEventListener("transaction-added", fetchMonthlyData);
-  }, [currentDate, mounted]);
+  }, [currentDate, mounted, isCurrentMonth]);
+
+  const reportData = useMemo(
+    () =>
+      isCurrentMonth
+        ? {
+            incomeByCategory: store.incomeByCategory,
+            expenseByCategory: store.expenseByCategory,
+            total: {
+              totalIncome: store.totalIncome,
+              totalExpense: store.totalExpense,
+              netBalance: store.netBalance,
+            },
+          }
+        : pastMonthData ?? {
+            incomeByCategory: [], expenseByCategory: [],
+            total: { totalIncome: 0, totalExpense: 0, netBalance: 0 },
+          },
+    [
+      isCurrentMonth,
+      pastMonthData,
+      store.incomeByCategory,
+      store.expenseByCategory,
+      store.totalIncome,
+      store.totalExpense,
+      store.netBalance,
+    ]
+  );
+
+  const isLoading = !mounted || (isCurrentMonth ? !store.hydrated : pastMonthLoading);
 
   const rows: CategoryRow[] = useMemo(() => {
     const src = selectedChart === 'expense' ? reportData.expenseByCategory : reportData.incomeByCategory;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React, { useEffect } from "react";
+import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { format } from "date-fns";
@@ -9,19 +9,10 @@ import { format } from "date-fns";
    the sign carries direction, color only reinforces it. */
 
 export function RecentTransactionsCard() {
-  const { recentTransactions, isRecentTransactionsLoading, fetchRecentTransactions } = useDashboardStore();
+  // Rows come from the page-level /api/dashboard fetch.
+  const { recentTransactions, hydrated } = useDashboardStore();
 
-  useEffect(() => {
-    fetchRecentTransactions();
-
-    const handleTransactionChange = () => {
-      fetchRecentTransactions();
-    };
-    window.addEventListener("transaction-added", handleTransactionChange);
-    return () => window.removeEventListener("transaction-added", handleTransactionChange);
-  }, [fetchRecentTransactions]);
-
-  if (isRecentTransactionsLoading) {
+  if (!hydrated) {
     return (
       <section className="border-t border-[var(--hairline)] pt-6">
         <div className="mb-5 flex items-center justify-between">

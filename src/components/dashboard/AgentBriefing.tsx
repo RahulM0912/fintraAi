@@ -7,27 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useQuickAdd } from "@/components/common/QuickAddProvider";
 
-type Tone = "warning" | "caution" | "tip" | "positive" | "note";
-
-interface Insight {
-  tone: Tone;
-  title: string;
-  detail: string;
-  metric?: string;
-}
-
-interface Stat {
-  label: string;
-  value: string;
-  tone: "pos" | "neg" | "neutral";
-}
-
-interface InsightResponse {
-  hasData: boolean;
-  primary: Insight | null;
-  stats: Stat[];
-}
-
 function inr(n: number) {
   return `₹${Math.round(Math.abs(n)).toLocaleString("en-IN")}`;
 }
@@ -88,30 +67,13 @@ function ActionButton({
 }
 
 export function AgentBriefing() {
-  const { totalIncome, totalExpense, netBalance, isSummaryLoading } = useDashboardStore();
+  // Data arrives via the page-level /api/dashboard fetch; this component
+  // only reads the store.
+  const { totalIncome, totalExpense, netBalance, insights, hydrated } = useDashboardStore();
   const { openAdd } = useQuickAdd();
-  const [insights, setInsights] = useState<InsightResponse | null>(null);
-  const [insightLoading, setInsightLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const fetchInsight = () => {
-      fetch(`/api/insights?_t=${Date.now()}`, { cache: "no-store" })
-        .then((res) => {
-          if (!res.ok) throw new Error(`${res.status}`);
-          return res.json();
-        })
-        .then(setInsights)
-        .catch(console.error)
-        .finally(() => setInsightLoading(false));
-    };
-    fetchInsight();
-    window.addEventListener("transaction-added", fetchInsight);
-    return () => window.removeEventListener("transaction-added", fetchInsight);
-  }, [mounted]);
 
   const now = new Date();
   const monthName = new Intl.DateTimeFormat("en-US", { month: "long" }).format(now);
@@ -121,7 +83,7 @@ export function AgentBriefing() {
     year: "numeric",
   }).format(now);
 
-  const isLoading = !mounted || isSummaryLoading || insightLoading;
+  const isLoading = !mounted || !hydrated;
   const hasActivity = (totalIncome ?? 0) > 0 || (totalExpense ?? 0) > 0;
   const net = netBalance ?? 0;
   const insight = insights?.primary ?? null;
@@ -214,31 +176,9 @@ export function AgentBriefing() {
               <ActionButton href="/transactions">See the transactions</ActionButton>
             )}
           </div>
-
-          {/* Quiet evidence tags backing the prose */}
-          {insights && insights.stats.length > 0 && (
-            <p className="mt-5 text-[13px] text-[var(--ink-3)]">
-              {insights.stats.map((s, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <span aria-hidden> · </span>}
-                  <span>
-                    {s.label}{" "}
-                    <span
-                      className={`tnum font-medium ${
-                        s.tone === "pos"
-                          ? "text-[var(--pos)]"
-                          : s.tone === "neg"
-                          ? "text-[var(--neg)]"
-                          : "text-[var(--ink-2)]"
-                      }`}
-                    >
-                      {s.value}
-                    </span>
-                  </span>
-                </React.Fragment>
-              ))}
-            </p>
-          )}
+          {/* No stat caption here: "Top category" already lives in "Where it
+              went" and the totals live in the numbers strip. Briefing =
+              interpretation; sections = evidence; no third layer. */}
         </>
       )}
     </section>

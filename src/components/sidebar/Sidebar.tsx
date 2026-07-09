@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, CreditCard, MessageSquare, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getUserDisplay } from "@/utils/userDisplay";
-import { ManageAccountModal } from "@/components/common/ManageAccountModal";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -26,7 +24,6 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const [manageAccountOpen, setManageAccountOpen] = useState(false);
 
   const { displayName, email, avatarUrl, initials } = getUserDisplay(user);
 
@@ -104,11 +101,11 @@ export function Sidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[240px]">
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => setManageAccountOpen(true)}
-            >
-              <SettingsIcon className="mr-2 h-4 w-4" /> Manage account
+            {/* Account management lives on the settings page — one home for it */}
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/settings">
+                <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer text-[var(--neg)] focus:text-[var(--neg)]"
@@ -119,11 +116,6 @@ export function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <ManageAccountModal
-        open={manageAccountOpen}
-        onClose={() => setManageAccountOpen(false)}
-      />
     </aside>
   );
 }

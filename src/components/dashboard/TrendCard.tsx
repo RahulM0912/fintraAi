@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useDashboardStore } from "@/store/dashboardStore";
+import type { TrendPoint } from "@/lib/server/dashboardData";
 import {
   LineChart,
   Line,
@@ -12,15 +14,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
-interface TrendPoint {
-  year: number;
-  month: number;
-  label: string;
-  income: number;
-  expense: number;
-  net: number;
-}
 
 const RANGES = [6, 12] as const;
 type Range = (typeof RANGES)[number];
@@ -107,8 +100,9 @@ function makeEndLabel(name: string, color: string, lastIndex: number, dy: number
 
 export function TrendCard() {
   const [range, setRange] = useState<Range>(6);
-  const [points, setPoints] = useState<TrendPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // The store holds 12 months (from /api/dashboard); the toggle just slices —
+  // switching 6M/12M is instant, no refetch.
+  const { trendPoints, hydrated } = useDashboardStore();
   const [mounted, setMounted] = useState(false);
   const [tokens, setTokens] = useState<ChartTokens>(FALLBACK_TOKENS);
 
@@ -120,23 +114,8 @@ export function TrendCard() {
     return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    const fetchTrends = () => {
-      setIsLoading(true);
-      fetch(`/api/trends?months=${range}&_t=${Date.now()}`, { cache: "no-store" })
-        .then((res) => {
-          if (!res.ok) throw new Error(`${res.status}`);
-          return res.json();
-        })
-        .then((data) => setPoints(data.points ?? []))
-        .catch(console.error)
-        .finally(() => setIsLoading(false));
-    };
-    fetchTrends();
-    window.addEventListener("transaction-added", fetchTrends);
-    return () => window.removeEventListener("transaction-added", fetchTrends);
-  }, [range, mounted]);
+  const points = useMemo(() => trendPoints.slice(-range), [trendPoints, range]);
+  const isLoading = !mounted || !hydrated;
 
   const hasData = useMemo(
     () => points.some((p) => p.income > 0 || p.expense > 0),

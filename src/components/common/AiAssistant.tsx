@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { X, MessageSquare } from "lucide-react";
 import { useChat } from "@/lib/chat/useChat";
@@ -10,6 +11,7 @@ import { ChatInput, type ChatInputHandle } from "@/components/chat/ChatInput";
 import { ASSISTANT_SUGGESTIONS, ASSISTANT_WELCOME } from "@/components/chat/suggestions";
 
 export function AiAssistant() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const chat = useChat({ welcomeMessage: ASSISTANT_WELCOME });
@@ -51,6 +53,9 @@ export function AiAssistant() {
     // handleSend is stable enough for this fire-and-forget bridge
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The chat page IS the assistant — a floating second chat there is noise.
+  if (pathname.startsWith("/chat")) return null;
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import { Command } from "@langchain/langgraph";
-import { fintraGraph, buildSystemPrompt } from "@/lib/langgraph/graph";
+import { fintraGraph, buildSystemPrompt, messageText } from "@/lib/langgraph/graph";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { calculateCost } from "@/lib/langgraph/types";
 import { summarizeHistory } from "@/lib/langgraph/summarize";
@@ -99,6 +99,7 @@ export async function runChat(
 
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let sentText = false;
 
   const config = {
     version: "v2" as const,
@@ -128,9 +129,11 @@ export async function runChat(
         break;
       case "on_chat_model_stream": {
         if (event.metadata?.langgraph_node !== "agent") break;
-        const chunk = event.data?.chunk;
-        const content = typeof chunk?.content === "string" ? chunk.content : "";
-        if (content) send({ type: "token", content });
+        const content = messageText(event.data?.chunk?.content);
+        if (content) {
+          sentText = true;
+          send({ type: "token", content });
+        }
         break;
       }
       case "on_chat_model_end": {
@@ -147,8 +150,11 @@ export async function runChat(
         if (event.metadata?.langgraph_node === "confirm") {
           const msgs = event.data?.output?.messages;
           const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined;
-          const content = typeof msg?.content === "string" ? msg.content : "";
-          if (content) send({ type: "token", content });
+          const content = messageText(msg?.content);
+          if (content) {
+            sentText = true;
+            send({ type: "token", content });
+          }
         }
         break;
       }
@@ -177,6 +183,28 @@ export async function runChat(
     send({ type: "interrupt", threadId: body.threadId, payload: pendingInterrupts[0] });
     send({ type: "done" });
     return;
+  }
+
+  // Safety net: if no token ever made it to the client (e.g. a provider chunk
+  // shape we didn't anticipate), recover the final AI message from graph state
+  // so the user never sees a silent, empty reply.
+  if (!sentText) {
+    const msgs = (state.values as { messages?: unknown[] } | undefined)?.messages;
+    if (Array.isArray(msgs)) {
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i] as {
+          getType?: () => string;
+          _getType?: () => string;
+          content?: unknown;
+        };
+        const kind = m?.getType?.() ?? m?._getType?.();
+        if (kind === "ai") {
+          const content = messageText(m.content);
+          if (content) send({ type: "token", content });
+          break;
+        }
+      }
+    }
   }
 
   // Turn completed — fold any overflow past the verbatim window into the running

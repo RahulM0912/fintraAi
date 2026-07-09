@@ -236,8 +236,10 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
           ))}
         </div>
 
-        {/* Loading skeletons */}
-        {isLoading &&
+        {/* Skeletons only when there's nothing to show yet (first load).
+            On filter/page changes the previous rows stay visible, dimmed,
+            so the table never flashes. */}
+        {isLoading && transactions.length === 0 &&
           Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
         {/* Empty state */}
@@ -257,8 +259,15 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
         )}
 
         {/* Ledger rows */}
-        {!isLoading &&
-          transactions.map((tx) => {
+        <div
+          aria-busy={isLoading || undefined}
+          className={
+            isLoading && transactions.length > 0
+              ? "opacity-50 transition-opacity duration-150 ease-out pointer-events-none"
+              : "transition-opacity duration-150 ease-out"
+          }
+        >
+          {transactions.map((tx) => {
             const txDate = new Date(tx.date)
             const isIncome = tx.type === "income"
             const amount = (
@@ -319,6 +328,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
               </div>
             )
           })}
+        </div>
       </div>
 
       {pagination && pagination.total > 0 && (

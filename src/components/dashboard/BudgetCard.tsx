@@ -1,54 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { Plus } from "lucide-react"
 import { BudgetModal, type EditingBudget } from "@/components/dashboard/BudgetModal"
-
-type BudgetItem = {
-  id: string
-  categoryId: string
-  categoryName: string
-  categoryIcon: string
-  amount: number
-  spent: number
-  percentage: number
-}
-
-type BudgetData = {
-  month: string
-  overall: { id: string; amount: number; spent: number; percentage: number } | null
-  items: BudgetItem[]
-  totalExpense: number
-}
+import { useDashboardStore } from "@/store/dashboardStore"
 
 function inr(n: number) {
   return `₹${n.toLocaleString("en-IN")}`
 }
 
 export function BudgetCard() {
-  const [data, setData] = useState<BudgetData | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Budgets come from the page-level /api/dashboard fetch; saving a budget
+  // triggers a background store refresh.
+  const { budgets: data, hydrated, fetchDashboard } = useDashboardStore()
+  const loading = !hydrated
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<EditingBudget | null>(null)
-
-  const fetchBudgets = useCallback(async () => {
-    try {
-      const res = await fetch("/api/budgets")
-      if (!res.ok) throw new Error()
-      setData(await res.json())
-    } catch {
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchBudgets()
-    const handler = () => fetchBudgets()
-    window.addEventListener("transaction-added", handler)
-    return () => window.removeEventListener("transaction-added", handler)
-  }, [fetchBudgets])
 
   const openNew = () => {
     setEditing(null)
@@ -124,7 +91,7 @@ export function BudgetCard() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         editing={editing}
-        onSaved={fetchBudgets}
+        onSaved={fetchDashboard}
       />
     </section>
   )

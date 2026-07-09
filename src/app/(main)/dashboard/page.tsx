@@ -14,24 +14,20 @@ import { TrendCard } from "@/components/dashboard/TrendCard"
 
 export default function Dashboard() {
   const { fetchAllCategories } = useTransactionStore()
-  const { fetchSummary } = useDashboardStore()
+  const { fetchDashboard } = useDashboardStore()
   const { openAdd } = useQuickAdd()
 
+  // One request hydrates every section (stale-while-revalidate: cached data
+  // paints instantly on revisit, refresh runs in the background). This is the
+  // only place the dashboard fetches or listens — sections just read the store.
   useEffect(() => {
     fetchAllCategories();
+    fetchDashboard();
 
-    const fetchGlobalSummary = () => {
-      const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
-      fetchSummary(start.toISOString(), end.toISOString());
-    };
-
-    fetchGlobalSummary();
-
-    window.addEventListener("transaction-added", fetchGlobalSummary);
-    return () => window.removeEventListener("transaction-added", fetchGlobalSummary);
-  }, [fetchAllCategories, fetchSummary]);
+    const refresh = () => fetchDashboard();
+    window.addEventListener("transaction-added", refresh);
+    return () => window.removeEventListener("transaction-added", refresh);
+  }, [fetchAllCategories, fetchDashboard]);
 
   return (
     <div className="mx-auto max-w-5xl px-5 pt-6 pb-10 sm:px-8 lg:pt-12 lg:pb-16">

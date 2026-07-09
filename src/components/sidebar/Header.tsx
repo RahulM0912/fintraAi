@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
@@ -12,6 +13,13 @@ export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { openPalette } = useQuickAdd();
+
+  // The shortcut is Ctrl+K everywhere except Apple platforms — show the key
+  // the user actually has. Detected after mount to avoid hydration mismatch.
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    setIsMac(/Mac|iP(hone|ad|od)/.test(navigator.platform ?? navigator.userAgent));
+  }, []);
 
   let title = "Dashboard";
   if (pathname.includes("transactions")) title = "Transactions";
@@ -60,7 +68,7 @@ export function Header() {
           <Search className="h-4 w-4" aria-hidden />
           <span className="hidden md:inline">Quick add</span>
           <kbd className="rounded border border-[var(--hairline)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-3)]">
-            ⌘K
+            {isMac ? "⌘K" : "Ctrl K"}
           </kbd>
         </button>
         <ThemeToggle />
