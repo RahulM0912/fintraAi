@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { format } from "date-fns"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { useTransactionStore, type CategoryState } from "@/store/transactionStore"
+import { postAddToast, rememberLastCategory } from "@/lib/quickAdd"
 import {
   Search,
   CornerDownLeft,
@@ -12,6 +15,7 @@ import {
   Settings,
   ArrowUpCircle,
   ArrowDownCircle,
+  Tag,
 } from "lucide-react"
 
 type QuickAddType = "income" | "expense"
@@ -42,6 +46,29 @@ function parseQuickAdd(raw: string): Parsed | null {
   }
 }
 
+// Try to resolve a category from the typed words ("500 food" → Food and
+// drinks). Word-prefix match either way, ≥3 chars, so "grocery" hits
+// "Groceries" but stray short words don't. The matched word leaves the
+// description; the rest stays. Purely client-side — instant, no LLM.
+function matchCategory(
+  description: string | undefined,
+  categories: CategoryState[]
+): { category: CategoryState; rest?: string } | null {
+  if (!description) return null
+  const tokens = description.toLowerCase().split(/\s+/).filter(Boolean)
+  for (const category of categories) {
+    const words = category.name.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3)
+    for (const token of tokens) {
+      if (token.length < 3) continue
+      if (words.some((w) => w === token || w.startsWith(token) || token.startsWith(w))) {
+        const rest = tokens.filter((t) => t !== token).join(" ")
+        return { category, rest: rest || undefined }
+      }
+    }
+  }
+  return null
+}
+
 function formatINR(n: number) {
   return `₹${n.toLocaleString("en-IN")}`
 }
@@ -50,12 +77,41 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
   const router = useRouter()
   const [q, setQ] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isLogging, setIsLogging] = useState(false)
+
+  const {
+    incomeCategories,
+    expenseCategories,
+    getIncomeCategories,
+    getExpenseCategories,
+    addTransaction,
+  } = useTransactionStore()
 
   useEffect(() => {
-    if (!open) setQ("")
+    if (!open) {
+      setQ("")
+      setIsLogging(false)
+      return
+    }
+    // Categories power the direct-log match below; cached after first load.
+    getIncomeCategories().catch(() => {})
+    getExpenseCategories().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const parsed = useMemo(() => parseQuickAdd(q), [q])
+  // When the words name a category, Enter logs straight from the palette —
+  // Ctrl+K → "500 food" → Enter, done. Otherwise Enter opens the form.
+  const matched = useMemo(
+    () =>
+      parsed
+        ? matchCategory(
+            parsed.description,
+            parsed.type === "income" ? incomeCategories : expenseCategories
+          )
+        : null,
+    [parsed, incomeCategories, expenseCategories]
+  )
   const filter = q.trim().toLowerCase()
 
   const go = (href: string) => {
@@ -87,9 +143,40 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
     setActiveIndex(0)
   }, [q, open])
 
-  const commitQuickAdd = () => {
-    if (!parsed) return
-    onQuickAdd(parsed.type, { amount: parsed.amount, description: parsed.description })
+  const commitQuickAdd = async () => {
+    if (!parsed || isLogging) return
+
+    // No category resolved — hand off to the form, prefilled.
+    if (!matched) {
+      onQuickAdd(parsed.type, { amount: parsed.amount, description: parsed.description })
+      return
+    }
+
+    // Category resolved — log it right here, today's date.
+    setIsLogging(true)
+    const created = await addTransaction(parsed.type, {
+      amount: parsed.amount,
+      categoryId: matched.category.id,
+      description: matched.rest,
+      date: format(new Date(), "yyyy-MM-dd"),
+    })
+    setIsLogging(false)
+
+    if (created) {
+      rememberLastCategory(parsed.type, String(matched.category.id))
+      postAddToast({
+        id: created.id,
+        amount: parsed.amount,
+        type: parsed.type,
+        categoryId: String(matched.category.id),
+        categoryName: matched.category.name,
+      })
+      window.dispatchEvent(new Event("transaction-added"))
+      onOpenChange(false)
+    } else {
+      // API refused — fall back to the form so nothing typed is lost.
+      onQuickAdd(parsed.type, { amount: parsed.amount, description: parsed.description })
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -135,7 +222,8 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
           {parsed && (
             <button
               onClick={commitQuickAdd}
-              className="group flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[var(--brand-border)] bg-[var(--brand-bg)] px-3 py-3 text-left transition-colors"
+              disabled={isLogging}
+              className="group flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[var(--brand-border)] bg-[var(--brand-bg)] px-3 py-3 text-left transition-colors disabled:opacity-60"
             >
               {parsed.type === "income" ? (
                 <ArrowUpCircle className="h-5 w-5 shrink-0 text-[var(--pos)]" />
@@ -145,12 +233,22 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
               <span className="flex-1 text-sm text-[var(--ink)]">
                 Add {parsed.type}{" "}
                 <span className="font-semibold">{formatINR(parsed.amount)}</span>
-                {parsed.description ? (
+                {matched?.rest && (
+                  <span className="text-[var(--ink-2)]"> · {matched.rest}</span>
+                )}
+                {!matched && parsed.description ? (
                   <span className="text-[var(--ink-2)]"> · {parsed.description}</span>
                 ) : null}
+                {matched && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded border border-[var(--hairline-strong)] px-1.5 py-0.5 text-xs text-[var(--ink-2)]">
+                    <Tag className="h-3 w-3" aria-hidden />
+                    {matched.category.name}
+                  </span>
+                )}
               </span>
               <span className="flex items-center gap-1 text-xs text-[var(--ink-3)]">
-                <CornerDownLeft className="h-3.5 w-3.5" /> Enter
+                <CornerDownLeft className="h-3.5 w-3.5" />
+                {isLogging ? "Logging…" : matched ? "Enter to log" : "Enter to open form"}
               </span>
             </button>
           )}
@@ -195,7 +293,8 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
 
           {parsed && (
             <p className="px-3 pt-2 pb-1 text-[11px] text-[var(--ink-3)]">
-              Tip: prefix <span className="font-medium text-[var(--ink-2)]">+</span> for income (e.g. +5000 salary).
+              Tip: name a category to log instantly (e.g. 500 food) · prefix{" "}
+              <span className="font-medium text-[var(--ink-2)]">+</span> for income (+5000 salary).
             </p>
           )}
         </div>

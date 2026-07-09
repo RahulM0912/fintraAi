@@ -57,6 +57,22 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  // ?add=1 (PWA "Add expense" shortcut) opens the modal on arrival. The param
+  // is stripped so a refresh doesn't re-open it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("add") === "1") {
+      params.delete("add")
+      const rest = params.toString()
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + (rest ? `?${rest}` : "")
+      )
+      openAdd("expense")
+    }
+  }, [openAdd])
+
   return (
     <QuickAddContext.Provider value={{ openPalette, openAdd }}>
       {children}
