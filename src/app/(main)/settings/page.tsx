@@ -10,17 +10,18 @@ import { ManageAccountModal } from "@/components/common/ManageAccountModal"
 import { RecurringSection } from "@/components/settings/RecurringSection"
 import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
 import { DataSection } from "@/components/settings/DataSection"
-import { Palette, UserRound } from "lucide-react"
+import { LogOut, Palette, UserRound } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [manageOpen, setManageOpen] = useState(false)
 
   const { displayName, email, avatarUrl, initials } = getUserDisplay(user)
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-24">
-      <div>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 lg:pb-8">
+      {/* Mobile gets the title from the app header */}
+      <div className="hidden lg:block">
         <h1 className="font-sora text-[26px] font-bold tracking-tight text-[var(--ink)]">
           Settings
         </h1>
@@ -67,6 +68,15 @@ export default function SettingsPage() {
 
       {/* Data */}
       <DataSection />
+
+      {/* Sign out */}
+      <button
+        onClick={() => signOut()}
+        className="cursor-pointer flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] px-5 py-3.5 text-sm font-semibold text-[var(--neg)] transition-colors hover:bg-[var(--neg-bg)]"
+      >
+        <LogOut className="h-4 w-4" />
+        Log out
+      </button>
 
       <p className="text-center text-xs text-[var(--ink-3)] pt-2">Fintra · v0.1</p>
 

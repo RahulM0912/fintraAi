@@ -15,26 +15,26 @@ const tabs = [
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { openPalette } = useQuickAdd()
+  const { openAdd } = useQuickAdd()
 
   return (
     <nav
       className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface)]/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
       aria-label="Primary"
     >
-      <div className="grid grid-cols-5 items-center h-16">
+      <div className="grid h-16 grid-cols-5 items-center">
         {tabs.slice(0, 2).map((t) => (
           <Tab key={t.href} {...t} active={isActive(pathname, t.href)} />
         ))}
 
-        {/* Center quick-add */}
+        {/* Center add — opens the transaction modal directly (palette is desktop ⌘K) */}
         <div className="flex items-center justify-center">
           <button
-            onClick={openPalette}
-            aria-label="Quick add"
-            className="cursor-pointer -mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-lg shadow-[var(--brand)]/30 transition-transform active:scale-95"
+            onClick={() => openAdd("expense")}
+            aria-label="Add transaction"
+            className="cursor-pointer -mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)] shadow-sm transition-transform duration-150 ease-out active:scale-95"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-6 w-6" aria-hidden />
           </button>
         </div>
 
@@ -64,12 +64,13 @@ function Tab({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-full flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors",
+        "flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors duration-150 ease-out",
         active ? "text-[var(--brand)]" : "text-[var(--ink-3)]"
       )}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="h-5 w-5" aria-hidden />
       {name}
     </Link>
   )

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Pencil, Trash2, ChevronLeft, ChevronRight, Plus as PlusIcon } from "lucide-react"
+import { useQuickAdd } from "@/components/common/QuickAddProvider"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -40,15 +41,7 @@ type Props = {
   onRefresh: () => void
 }
 
-const COLS = "grid-cols-[1.4fr_1.2fr_0.9fr_1.2fr_1fr_100px]"
-
-function StatusBadge() {
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 whitespace-nowrap">
-      Completed
-    </span>
-  )
-}
+const COLS = "grid-cols-[1.4fr_1.6fr_1.2fr_1fr_100px]"
 
 function DeleteConfirmDialog({
   open,
@@ -120,7 +113,8 @@ function PaginationBar({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={!hasPrev}
-          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center transition-colors"
+          aria-label="Previous page"
+          className="cursor-pointer h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -133,7 +127,9 @@ function PaginationBar({
             <button
               key={p}
               onClick={() => onPageChange(p as number)}
-              className={`h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors ${
+              aria-label={`Page ${p}`}
+              aria-current={p === page ? "page" : undefined}
+              className={`cursor-pointer h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors ${
                 p === page
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-muted text-foreground"
@@ -146,7 +142,8 @@ function PaginationBar({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={!hasNext}
-          className="h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 flex items-center justify-center transition-colors"
+          aria-label="Next page"
+          className="cursor-pointer h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -171,10 +168,7 @@ function MobileSkeletonCard() {
       </div>
       <Skeleton className="h-3 w-40 mt-3" />
       <div className="flex items-center justify-between mt-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-4 w-20 rounded" />
-          <Skeleton className="h-3 w-24" />
-        </div>
+        <Skeleton className="h-3 w-24" />
         <div className="flex gap-1.5">
           <Skeleton className="h-7 w-7 rounded-md" />
           <Skeleton className="h-7 w-7 rounded-md" />
@@ -196,7 +190,6 @@ function DesktopSkeletonRow() {
         </div>
       </div>
       <Skeleton className="h-3.5 w-24" />
-      <Skeleton className="h-5 w-20 rounded" />
       <div className="space-y-1.5">
         <Skeleton className="h-3.5 w-24" />
         <Skeleton className="h-3 w-16" />
@@ -211,6 +204,7 @@ function DesktopSkeletonRow() {
 }
 
 export function TransactionTable({ transactions, pagination, isLoading, onPageChange, onRefresh }: Props) {
+  const { openAdd } = useQuickAdd()
   const [editTx, setEditTx] = useState<Transaction | null>(null)
   const [deleteTx, setDeleteTx] = useState<Transaction | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -234,7 +228,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
   /* ── Desktop table header ── */
   const tableHeader = (
     <div className={`hidden md:grid ${COLS} px-6 py-3 border-b bg-muted/40`}>
-      {["CATEGORY", "DESCRIPTION", "STATUS", "DATE & TIME", "AMOUNT", "ACTIONS"].map((h) => (
+      {["CATEGORY", "DESCRIPTION", "DATE & TIME", "AMOUNT", "ACTIONS"].map((h) => (
         <div
           key={h}
           className={`text-xs font-semibold text-muted-foreground tracking-wider uppercase ${
@@ -267,7 +261,14 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
         {/* Empty state */}
         {!isLoading && transactions.length === 0 && (
           <div className="p-16 text-center">
-            <p className="text-muted-foreground text-sm">No transactions found for the selected filters.</p>
+            <p className="text-muted-foreground text-sm">No transactions match these filters.</p>
+            <p className="text-muted-foreground/70 text-xs mt-1">Try a different period or clear the search.</p>
+            <Button
+              onClick={() => openAdd("expense")}
+              className="mt-5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg"
+            >
+              <PlusIcon className="mr-2 h-4 w-4" /> Add transaction
+            </Button>
           </div>
         )}
 
@@ -306,12 +307,9 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                   <p className="text-xs text-muted-foreground mt-2 truncate">{tx.description}</p>
                 )}
 
-                {/* Row 3: date + badge | actions */}
+                {/* Row 3: date | actions */}
                 <div className="flex items-center justify-between mt-2.5 gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <StatusBadge />
-                    <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
-                  </div>
+                  <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button
                       variant="ghost"
@@ -352,9 +350,6 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                 <div className="text-sm text-muted-foreground truncate pr-2">
                   {tx.description || <span className="text-muted-foreground/40 italic">—</span>}
                 </div>
-
-                {/* Status */}
-                <div><StatusBadge /></div>
 
                 {/* Date & Time */}
                 <div className="text-sm text-muted-foreground leading-tight">

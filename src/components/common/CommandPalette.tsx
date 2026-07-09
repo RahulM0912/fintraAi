@@ -49,6 +49,7 @@ function formatINR(n: number) {
 export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
   const router = useRouter()
   const [q, setQ] = useState("")
+  const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
     if (!open) setQ("")
@@ -79,10 +80,30 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
   const showLists = !parsed
   const nav = navItems.filter((i) => i.label.toLowerCase().includes(filter))
   const actions = actionItems.filter((i) => i.label.toLowerCase().includes(filter))
+  // Flat list in render order (actions first) for arrow-key navigation
+  const flatItems = [...actions, ...nav]
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [q, open])
 
   const commitQuickAdd = () => {
     if (!parsed) return
     onQuickAdd(parsed.type, { amount: parsed.amount, description: parsed.description })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      if (parsed) commitQuickAdd()
+      else flatItems[activeIndex]?.run()
+    } else if (e.key === "ArrowDown" && flatItems.length > 0) {
+      e.preventDefault()
+      setActiveIndex((i) => (i + 1) % flatItems.length)
+    } else if (e.key === "ArrowUp" && flatItems.length > 0) {
+      e.preventDefault()
+      setActiveIndex((i) => (i - 1 + flatItems.length) % flatItems.length)
+    }
   }
 
   return (
@@ -100,12 +121,7 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && parsed) {
-                e.preventDefault()
-                commitQuickAdd()
-              }
-            }}
+            onKeyDown={handleKeyDown}
             placeholder="Type an amount to add, or search…  e.g. 200 coffee"
             className="flex-1 bg-transparent text-[15px] text-[var(--ink)] placeholder:text-[var(--ink-3)] outline-none"
           />
@@ -143,15 +159,29 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
             <>
               {actions.length > 0 && (
                 <Section label="Quick actions">
-                  {actions.map((item) => (
-                    <Row key={item.label} icon={item.icon} label={item.label} onClick={item.run} />
+                  {actions.map((item, i) => (
+                    <Row
+                      key={item.label}
+                      icon={item.icon}
+                      label={item.label}
+                      onClick={item.run}
+                      active={activeIndex === i}
+                      onHover={() => setActiveIndex(i)}
+                    />
                   ))}
                 </Section>
               )}
               {nav.length > 0 && (
                 <Section label="Navigate">
-                  {nav.map((item) => (
-                    <Row key={item.label} icon={item.icon} label={item.label} onClick={item.run} />
+                  {nav.map((item, i) => (
+                    <Row
+                      key={item.label}
+                      icon={item.icon}
+                      label={item.label}
+                      onClick={item.run}
+                      active={activeIndex === actions.length + i}
+                      onHover={() => setActiveIndex(actions.length + i)}
+                    />
                   ))}
                 </Section>
               )}
@@ -189,18 +219,26 @@ function Row({
   icon: Icon,
   label,
   onClick,
+  active,
+  onHover,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
   onClick: () => void
+  active: boolean
+  onHover: () => void
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
+      onMouseEnter={onHover}
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[var(--ink)] transition-colors ${
+        active ? "bg-[var(--surface-2)]" : ""
+      }`}
     >
       <Icon className="h-4 w-4 shrink-0 text-[var(--ink-3)]" />
-      {label}
+      <span className="flex-1">{label}</span>
+      {active && <CornerDownLeft className="h-3.5 w-3.5 text-[var(--ink-3)]" />}
     </button>
   )
 }

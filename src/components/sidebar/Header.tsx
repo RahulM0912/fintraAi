@@ -1,22 +1,22 @@
 "use client";
 
-import { Menu, Search } from "lucide-react";
+import Link from "next/link";
+import { Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getUserDisplay } from "@/utils/userDisplay";
-import { useSidebar } from "@/components/sidebar/SidebarContext";
 import { useQuickAdd } from "@/components/common/QuickAddProvider";
 
 export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { toggle } = useSidebar();
   const { openPalette } = useQuickAdd();
 
   let title = "Dashboard";
   if (pathname.includes("transactions")) title = "Transactions";
-  if (pathname.includes("settings")) title = "Settings";
+  else if (pathname.includes("settings")) title = "Settings";
+  else if (pathname.includes("chat")) title = "Chat";
 
   const { firstName } = getUserDisplay(user);
 
@@ -28,40 +28,40 @@ export function Header() {
   })();
 
   return (
-    <header className="h-16 lg:h-20 w-full flex items-center justify-between px-4 lg:px-8 border-b border-[var(--hairline)] lg:border-b-0 sticky top-0 z-10 backdrop-blur-md bg-[var(--app-bg)]/80">
+    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-[var(--hairline)] bg-[var(--app-bg)]/85 px-4 backdrop-blur-md lg:h-[72px] lg:border-b-0 lg:px-8">
       <div className="flex items-center gap-3">
-        {/* Hamburger — mobile/tablet only */}
-        <button
-          onClick={toggle}
-          className="cursor-pointer lg:hidden p-2 rounded-lg text-[var(--ink-2)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors"
-          aria-label="Toggle sidebar"
-          aria-expanded={false}
+        {/* Brand mark — mobile only (sidebar wordmark is desktop-only) */}
+        <Link
+          href="/dashboard"
+          className="font-display lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--hairline-strong)] text-base font-semibold text-[var(--ink)]"
+          aria-label="Fintra home"
         >
-          <Menu className="h-5 w-5" />
-        </button>
+          F
+        </Link>
 
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-sora text-lg lg:text-xl font-bold text-[var(--ink)]">
-            {title}
-          </h1>
-          {title === "Dashboard" && firstName && (
-            <span className="text-sm text-[var(--ink-3)] hidden sm:inline-block">
-              {greeting}, {firstName}
-            </span>
-          )}
-        </div>
+        {/* Mobile: page title (pages hide their own h1 below lg). Desktop: greeting —
+            each page renders its own h1, so no duplicate titles. */}
+        <h1 className="font-display lg:hidden text-lg font-semibold text-[var(--ink)]">
+          {title}
+        </h1>
+        <p className="hidden text-sm text-[var(--ink-2)] lg:block">
+          {greeting}
+          {firstName ? `, ${firstName}` : ""}
+        </p>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Quick-add / command palette — desktop affordance (mobile uses bottom-nav +) */}
         <button
           onClick={openPalette}
-          className="hidden sm:flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--ink-3)] hover:text-[var(--ink)] hover:border-[var(--brand-border)] transition-colors"
+          className="hidden min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-[var(--hairline-strong)] px-3 text-sm text-[var(--ink-2)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)] hover:text-[var(--ink)] sm:flex"
           aria-label="Open quick add and search"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-4 w-4" aria-hidden />
           <span className="hidden md:inline">Quick add</span>
-          <kbd className="rounded border border-[var(--hairline)] px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd>
+          <kbd className="rounded border border-[var(--hairline)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-3)]">
+            ⌘K
+          </kbd>
         </button>
         <ThemeToggle />
       </div>

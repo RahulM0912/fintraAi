@@ -153,7 +153,7 @@ export function Hero() {
 
           <div className="flex gap-3 flex-wrap">
             <Link
-              href="/dashboard"
+              href="/sign-up"
               className="inline-flex items-center gap-1.5 px-6 py-3 rounded-lg text-base font-semibold text-white bg-[var(--ld-purple)] hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
             >
               Start for free →

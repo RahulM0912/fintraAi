@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -26,20 +25,22 @@ interface TrendPoint {
 const RANGES = [6, 12] as const;
 type Range = (typeof RANGES)[number];
 
-// Recharts renders to SVG and passes stroke/fill/stop-color as presentation
-// attributes, which do NOT resolve CSS var(). So read the brand tokens off the
-// document at runtime and re-read when the theme class flips.
+// Recharts renders to SVG and passes stroke/fill as presentation attributes,
+// which do NOT resolve CSS var(). Read tokens off the document at runtime and
+// re-read when the theme class flips.
 interface ChartTokens {
   pos: string;
-  brand: string;
+  neg: string;
+  ink2: string;
   ink3: string;
   hairline: string;
 }
 const FALLBACK_TOKENS: ChartTokens = {
-  pos: "#15a860",
-  brand: "#5b52e8",
-  ink3: "#8890b0",
-  hairline: "#dde0ee",
+  pos: "#217a52",
+  neg: "#a44a2a",
+  ink2: "#5b564a",
+  ink3: "#746c5d",
+  hairline: "#e2ddce",
 };
 
 function readTokens(): ChartTokens {
@@ -47,8 +48,9 @@ function readTokens(): ChartTokens {
   const cs = getComputedStyle(document.documentElement);
   const get = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
   return {
-    pos: get("--pos", FALLBACK_TOKENS.pos),
-    brand: get("--brand", FALLBACK_TOKENS.brand),
+    pos: get("--chart-pos", FALLBACK_TOKENS.pos),
+    neg: get("--chart-neg", FALLBACK_TOKENS.neg),
+    ink2: get("--ink-2", FALLBACK_TOKENS.ink2),
     ink3: get("--ink-3", FALLBACK_TOKENS.ink3),
     hairline: get("--hairline", FALLBACK_TOKENS.hairline),
   };
@@ -64,16 +66,44 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload as TrendPoint;
   return (
-    <div className="bg-[var(--surface)] border border-[var(--hairline)] px-3 py-2 rounded-xl shadow-lg text-xs">
-      <p className="font-bold text-[var(--ink)] mb-1">{label} {p.year}</p>
-      <p className="text-[var(--pos)] font-semibold">Income ₹{p.income.toLocaleString("en-IN")}</p>
-      <p className="text-[var(--neg)] font-semibold">Expense ₹{p.expense.toLocaleString("en-IN")}</p>
-      <p className={cn("font-semibold mt-0.5", p.net >= 0 ? "text-[var(--ink)]" : "text-[var(--neg)]")}>
-        Net {p.net < 0 ? "-" : ""}₹{Math.abs(p.net).toLocaleString("en-IN")}
+    <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 text-xs shadow-sm">
+      <p className="font-medium text-[var(--ink)]">
+        {label} {p.year}
       </p>
+      <div className="tnum mt-1.5 space-y-1 text-[var(--ink-2)]">
+        <p className="flex items-center gap-2">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--chart-pos)]" />
+          Income <span className="ml-auto pl-4 font-medium text-[var(--ink)]">₹{p.income.toLocaleString("en-IN")}</span>
+        </p>
+        <p className="flex items-center gap-2">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--chart-neg)]" />
+          Spending <span className="ml-auto pl-4 font-medium text-[var(--ink)]">₹{p.expense.toLocaleString("en-IN")}</span>
+        </p>
+        <p className="flex items-center gap-2 border-t border-[var(--hairline)] pt-1">
+          <span aria-hidden className="h-2 w-2" />
+          Net
+          <span className={cn("ml-auto pl-4 font-medium", p.net < 0 ? "text-[var(--neg)]" : "text-[var(--ink)]")}>
+            {p.net < 0 ? "−" : ""}₹{Math.abs(p.net).toLocaleString("en-IN")}
+          </span>
+        </p>
+      </div>
     </div>
   );
 };
+
+/* Direct label at the last point of a series — replaces a legend. */
+function makeEndLabel(name: string, color: string, lastIndex: number, dy: number) {
+  const EndLabel = (props: { x?: number | string; y?: number | string; index?: number }) => {
+    const { x, y, index } = props;
+    if (index !== lastIndex || x == null || y == null) return <g />;
+    return (
+      <text x={Number(x) + 8} y={Number(y)} dy={dy} fill={color} fontSize={12} fontWeight={500}>
+        {name}
+      </text>
+    );
+  };
+  return EndLabel;
+}
 
 export function TrendCard() {
   const [range, setRange] = useState<Range>(6);
@@ -85,7 +115,6 @@ export function TrendCard() {
   useEffect(() => {
     setMounted(true);
     setTokens(readTokens());
-    // Re-read colors when the theme class toggles on <html>.
     const obs = new MutationObserver(() => setTokens(readTokens()));
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
@@ -114,117 +143,99 @@ export function TrendCard() {
     [points]
   );
 
+  // Nudge the two end labels apart based on which line finishes on top.
+  const last = points[points.length - 1];
+  const incomeOnTop = !last || last.income >= last.expense;
+
   if (isLoading) {
     return (
-      <Card className="bg-[var(--surface)] border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem]">
-        <CardContent className="p-8">
-          <div className="flex items-center justify-between mb-8">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-7 w-28 rounded-full" />
-          </div>
-          <Skeleton className="h-[200px] w-full rounded-2xl" />
-        </CardContent>
-      </Card>
+      <section className="border-t border-[var(--hairline)] pt-6">
+        <div className="mb-6 flex items-center justify-between">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-24 rounded-lg" />
+        </div>
+        <Skeleton className="h-[240px] w-full rounded-xl" />
+      </section>
     );
   }
 
   return (
-    <Card className="bg-[var(--surface)] border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none rounded-[2rem]">
-      <CardContent className="p-8">
-        <div className="flex items-center justify-between mb-6 gap-4">
-          <div>
-            <h2 className="font-sora text-[17px] font-bold text-[var(--ink)] tracking-tight">
-              Cash Flow Trend
-            </h2>
-            <p className="text-xs text-[var(--ink-3)] mt-0.5">Income vs expenses over time</p>
-          </div>
-          {/* Range toggle */}
-          <div className="flex items-center gap-0.5 rounded-full bg-[var(--surface-2)] p-0.5">
-            {RANGES.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={cn(
-                  "cursor-pointer text-[11px] font-bold px-3 py-1 rounded-full transition-colors",
-                  range === r
-                    ? "bg-[var(--surface)] text-[var(--ink)] shadow-sm"
-                    : "text-[var(--ink-3)] hover:text-[var(--ink)]"
-                )}
-              >
-                {r}M
-              </button>
-            ))}
-          </div>
+    <section aria-label="Cash flow trend" className="border-t border-[var(--hairline)] pt-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+            Cash flow
+          </h2>
+          <p className="mt-1 text-[13px] text-[var(--ink-2)]">
+            Income against spending, month by month
+          </p>
         </div>
+        <div className="flex items-center" role="group" aria-label="Chart range">
+          {RANGES.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              aria-pressed={range === r}
+              className={cn(
+                "cursor-pointer min-h-11 px-3 text-[13px] transition-colors duration-150 ease-out",
+                range === r
+                  ? "font-semibold text-[var(--ink)] underline decoration-[var(--brand)] decoration-2 underline-offset-8"
+                  : "text-[var(--ink-3)] hover:text-[var(--ink)]"
+              )}
+            >
+              {r}M
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 mb-4">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--ink-2)]">
-            <span className="h-2.5 w-2.5 rounded-full bg-[var(--pos)]" /> Income
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--ink-2)]">
-            <span className="h-2.5 w-2.5 rounded-full bg-[var(--brand)]" /> Expense
-          </span>
-        </div>
-
-        <div className="h-[220px] w-full relative">
-          {!hasData && (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-[var(--ink-3)] pointer-events-none z-10">
-              No activity in the last {range} months yet
-            </div>
-          )}
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={points} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-              <defs>
-                <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={tokens.pos} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={tokens.pos} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={tokens.brand} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={tokens.brand} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={tokens.hairline} vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: tokens.ink3 }}
-                axisLine={false}
-                tickLine={false}
-                dy={6}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: tokens.ink3 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={compactINR}
-                width={52}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: tokens.hairline }} />
-              <Area
-                type="monotone"
-                dataKey="income"
-                stroke={tokens.pos}
-                strokeWidth={2}
-                fill="url(#incomeFill)"
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-                isAnimationActive={mounted}
-              />
-              <Area
-                type="monotone"
-                dataKey="expense"
-                stroke={tokens.brand}
-                strokeWidth={2}
-                fill="url(#expenseFill)"
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-                isAnimationActive={mounted}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="relative h-[240px] w-full">
+        {!hasData && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-[13px] text-[var(--ink-3)]">
+            No activity in the last {range} months yet
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={points} margin={{ top: 8, right: 72, left: -8, bottom: 0 }}>
+            <CartesianGrid stroke={tokens.hairline} strokeWidth={1} vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: tokens.ink3 }}
+              axisLine={false}
+              tickLine={false}
+              dy={8}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: tokens.ink3 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={compactINR}
+              width={56}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: tokens.hairline, strokeWidth: 1 }} />
+            <Line
+              type="monotone"
+              dataKey="income"
+              stroke={tokens.pos}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 0 }}
+              isAnimationActive={false}
+              label={makeEndLabel("Income", tokens.pos, points.length - 1, incomeOnTop ? -8 : 16)}
+            />
+            <Line
+              type="monotone"
+              dataKey="expense"
+              stroke={tokens.neg}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 0 }}
+              isAnimationActive={false}
+              label={makeEndLabel("Spending", tokens.neg, points.length - 1, incomeOnTop ? 16 : -8)}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
   );
 }

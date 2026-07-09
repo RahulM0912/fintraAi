@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function LandingNavbar() {
+  const { user } = useAuth();
+
   return (
     <nav className="sticky top-0 z-50 bg-[var(--ld-bg)] border-b border-[var(--ld-border)] transition-colors duration-300">
       <div className="flex items-center justify-between h-[60px] max-w-[1100px] mx-auto px-4 md:px-8">
@@ -39,18 +42,29 @@ export function LandingNavbar() {
         {/* Right actions */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link
-            href="/sign-in"
-            className="hidden sm:inline-flex items-center px-4 py-[7px] rounded-lg text-sm font-medium border border-[var(--ld-border2)] text-[var(--ld-text)] hover:border-[var(--ld-purple)] hover:text-[var(--ld-purple)] transition-all duration-200"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 px-[18px] py-[7px] rounded-lg text-sm font-semibold text-white bg-[var(--ld-purple)] hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
-          >
-            Get started free →
-          </Link>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 px-[18px] py-[7px] rounded-lg text-sm font-semibold text-white bg-[var(--ld-purple)] hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
+            >
+              Go to dashboard →
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hidden sm:inline-flex items-center px-4 py-[7px] rounded-lg text-sm font-medium border border-[var(--ld-border2)] text-[var(--ld-text)] hover:border-[var(--ld-purple)] hover:text-[var(--ld-purple)] transition-all duration-200"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-1.5 px-[18px] py-[7px] rounded-lg text-sm font-semibold text-white bg-[var(--ld-purple)] hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
+              >
+                Get started free →
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

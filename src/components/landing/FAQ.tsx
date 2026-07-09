@@ -4,20 +4,20 @@ import { useState } from "react";
 
 const faqs = [
   {
-    q: "What counts as a query?",
-    a: "Every message you send to Fintra AI counts as one query — whether you're adding a transaction, asking for a summary, or editing something. One message = one query, regardless of how much you write in it.",
+    q: "What counts as an AI message?",
+    a: "Every message you send to Fintra AI counts as one — whether you're adding a transaction, asking for a summary, or editing something. One message = one, regardless of how much you write in it. Adding or editing transactions manually doesn't count.",
   },
   {
-    q: "What happens when I run out of queries?",
-    a: "You'll see a clear notification before you hit your limit. You can top up instantly with ₹40 for ~160 more queries, or upgrade to Pro for a much larger monthly allowance. Your data is never deleted.",
+    q: "What happens when I run out of AI messages?",
+    a: "The free plan includes 50 AI messages a month, and the count resets at the start of each month. Everything except the AI chat keeps working. Want unlimited chat right away? Add your own OpenRouter or Gemini key in Settings — your data is never touched.",
+  },
+  {
+    q: "Can I use my own AI key?",
+    a: "Yes. Add an OpenRouter or Gemini API key in Settings and your chat becomes unlimited on your own key. It's encrypted at rest, only used for your requests, and never returned to the browser.",
   },
   {
     q: "Is my financial data safe?",
-    a: "Yes. Your data is stored securely and never shared or sold. Fintra only reads data you explicitly give it through the chat. We don't connect to your bank account.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Absolutely. No lock-in, no cancellation fees. Cancel from your settings in one click and you'll keep Pro access until the end of your billing period.",
+    a: "Yes. Your data is stored securely and never shared or sold. Fintra only reads data you explicitly give it through the chat, and it doesn't connect to your bank account.",
   },
 ];
 
@@ -54,7 +54,7 @@ export function FAQ() {
             </button>
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                open === i ? "max-h-[200px] pb-4" : "max-h-0"
+                open === i ? "max-h-[260px] pb-4" : "max-h-0"
               }`}
             >
               <p className="px-5 text-[0.875rem] text-[var(--ld-text2)] leading-[1.7]">

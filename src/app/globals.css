@@ -8,6 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,73 +47,139 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ── Editorial design tokens ──────────────────────────────────────
+   Warm paper + near-black ink. One accent: deep evergreen (brand,
+   positive money). Muted clay for negative/overspend. No purple,
+   no gradients, no glows. Charts get their own mark-safe colors
+   (validated for CVD separation and lightness band per mode). */
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #5b52e8;
-  --primary-foreground: #ffffff;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: #5b52e8;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Paper + ink */
+  --app-bg: #f7f4ec;
+  --surface: #fdfbf6;
+  --surface-2: #efebdf;
+  --hairline: #e2ddce;
+  --hairline-strong: #d3cdbb;
+  --ink: #1f1d17;
+  --ink-2: #5b564a;
+  --ink-3: #746c5d;
+
+  /* Accent: deep evergreen */
+  --brand: #2e5f4c;
+  --brand-hover: #24503f;
+  --brand-bg: #e9efe6;
+  --brand-border: #c2d1c0;
+
+  /* Money semantics */
+  --pos: #217a52;
+  --pos-bg: #e4efe4;
+  --neg: #a44a2a;
+  --neg-bg: #f5e7dc;
+
+  /* Chart marks (series colors, CVD-validated vs light surface) */
+  --chart-pos: #217a52;
+  --chart-neg: #a44a2a;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: #7c6ff7;
-  --primary-foreground: #ffffff;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: #7c6ff7;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Warm charcoal, not blue-black */
+  --app-bg: #191712;
+  --surface: #201d17;
+  --surface-2: #2a261f;
+  --hairline: #363129;
+  --hairline-strong: #443e33;
+  --ink: #ece7db;
+  --ink-2: #b5ae9e;
+  --ink-3: #8e8776;
+
+  --brand: #8fbd9f;
+  --brand-hover: #a5ccb2;
+  --brand-bg: #253128;
+  --brand-border: #3e5445;
+
+  --pos: #7fbc96;
+  --pos-bg: #233129;
+  --neg: #d08e64;
+  --neg-bg: #362a20;
+
+  /* Dark-mode marks re-picked for the dark lightness band, not a flip */
+  --chart-pos: #42a06c;
+  --chart-neg: #ca6b3e;
+}
+
+/* ── shadcn/ui primitive tokens, mapped onto the palette ────────── */
+
+:root {
+  --radius: 0.75rem;
+  --background: var(--app-bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: #f7f4ec;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-bg);
+  --accent-foreground: var(--brand-hover);
+  --destructive: var(--neg);
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --ring: var(--brand);
+  /* Sequential evergreen ramp for categorical-by-rank breakdowns */
+  --chart-1: #2e5f4c;
+  --chart-2: #4e7d66;
+  --chart-3: #6e9a81;
+  --chart-4: #90b69e;
+  --chart-5: #b5d0be;
+  --sidebar: var(--app-bg);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: #f7f4ec;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--brand);
+}
+
+.dark {
+  --primary-foreground: #14231b;
+  --chart-1: #42a06c;
+  --chart-2: #3c8a5f;
+  --chart-3: #357452;
+  --chart-4: #2e5f45;
+  --chart-5: #4e7d66;
+  --sidebar-primary-foreground: #14231b;
+}
+
+/* ── Legacy --ld-* aliases (landing/auth still consume these).
+     Values now point at the editorial palette; the purple is gone.
+     TODO(phase 2): rename usages to semantic tokens and delete. ── */
+:root,
+.dark {
+  --ld-bg: var(--app-bg);
+  --ld-bg2: var(--surface);
+  --ld-bg3: var(--surface-2);
+  --ld-bg4: var(--surface-2);
+  --ld-surface: var(--surface);
+  --ld-surface2: var(--surface-2);
+  --ld-border: var(--hairline);
+  --ld-border2: var(--hairline-strong);
+  --ld-text: var(--ink);
+  --ld-text2: var(--ink-2);
+  --ld-text3: var(--ink-3);
+  --ld-purple: var(--brand);
+  --ld-purple2: var(--brand-hover);
+  --ld-purple-bg: var(--brand-bg);
+  --ld-purple-border: var(--brand-border);
+  --ld-green: var(--pos);
+  --ld-green-bg: var(--pos-bg);
+  --ld-red: var(--neg);
+  --ld-red-bg: var(--neg-bg);
+  --ld-accent-glow: transparent;
 }
 
 @layer base {
@@ -128,86 +195,52 @@
 }
 
 @layer utilities {
+  /* Display serif — headings and typeset monetary figures */
+  .font-display {
+    font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+    font-variant-numeric: lining-nums;
+  }
+  /* Transitional alias: pre-redesign screens used .font-sora for
+     headings; they now inherit the display serif until each screen
+     is reworked. TODO(phase 2): replace usages with .font-display. */
   .font-sora {
-    font-family: var(--font-sora);
+    font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+    font-variant-numeric: lining-nums;
+  }
+  /* Money and table figures: lining + tabular so columns align */
+  .tnum {
+    font-variant-numeric: lining-nums tabular-nums;
   }
 }
 
-/* ── Landing page design tokens ─────────────────────────────── */
-/* Light mode (default) */
-:root {
-  --ld-bg: #f5f6fa;
-  --ld-bg2: #ffffff;
-  --ld-bg3: #eef0f7;
-  --ld-bg4: #e4e7f2;
-  --ld-surface: #ffffff;
-  --ld-surface2: #f0f2fa;
-  --ld-border: #dde0ee;
-  --ld-border2: #c8cce0;
-  --ld-text: #0d0f1a;
-  --ld-text2: #4a5070;
-  --ld-text3: #8890b0;
-  --ld-purple: #5b52e8;
-  --ld-purple2: #7c6ff7;
-  --ld-purple-bg: #eeecff;
-  --ld-purple-border: #c4c0f8;
-  --ld-green: #15a860;
-  --ld-green-bg: #e6f9ef;
-  --ld-red: #d94040;
-  --ld-red-bg: #fdeaea;
-  --ld-accent-glow: rgba(91, 82, 232, 0.1);
+/* ── Slim scrollbar (used by scrollable card bodies) ─────────── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Dark mode */
-.dark {
-  --ld-bg: #0d0f14;
-  --ld-bg2: #13161e;
-  --ld-bg3: #1a1e2a;
-  --ld-bg4: #222636;
-  --ld-surface: #1e2230;
-  --ld-surface2: #262b3d;
-  --ld-border: #2e3449;
-  --ld-border2: #3a4060;
-  --ld-text: #f0f2f8;
-  --ld-text2: #9ba3bf;
-  --ld-text3: #5c6480;
-  --ld-purple: #7c6ff7;
-  --ld-purple2: #9d98fa;
-  --ld-purple-bg: #1e1c3a;
-  --ld-purple-border: #3d3880;
-  --ld-green: #22c97a;
-  --ld-green-bg: #0d2620;
-  --ld-red: #f06060;
-  --ld-red-bg: #2a1414;
-  --ld-accent-glow: rgba(124, 111, 247, 0.15);
-}
-
-/* ── Brand aliases (shared by landing + app) ────────────────── */
-/* Map semantic names onto the --ld-* tokens. Because --ld-* already
-   swap per color-scheme, one definition here covers light + dark. */
-:root {
-  --brand: var(--ld-purple);
-  --brand-hover: var(--ld-purple2);
-  --brand-bg: var(--ld-purple-bg);
-  --brand-border: var(--ld-purple-border);
-  --brand-glow: var(--ld-accent-glow);
-
-  --app-bg: var(--ld-bg);
-  --surface: var(--ld-surface);
-  --surface-2: var(--ld-surface2);
-  --hairline: var(--ld-border);
-
-  --ink: var(--ld-text);
-  --ink-2: var(--ld-text2);
-  --ink-3: var(--ld-text3);
-
-  --pos: var(--ld-green);
-  --pos-bg: var(--ld-green-bg);
-  --neg: var(--ld-red);
-  --neg-bg: var(--ld-red-bg);
-}
-
-@keyframes badge-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+/* ── Accessibility: honor reduced-motion ────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

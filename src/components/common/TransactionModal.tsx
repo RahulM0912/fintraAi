@@ -286,7 +286,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
                     <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{format(selectedDate, "MM/dd/yyyy")}</span>
+                    <span>{format(selectedDate, "dd MMM yyyy")}</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

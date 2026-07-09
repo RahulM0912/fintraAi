@@ -37,13 +37,17 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
+      <div className="flex items-center justify-between border-b px-6 py-3 lg:py-4">
+        {/* Mobile gets the title from the app header */}
+        <div className="hidden lg:block">
           <h1 className="text-lg font-semibold">AI Assistant</h1>
           <p className="text-sm text-muted-foreground">
             Chat naturally to manage your finances
           </p>
         </div>
+        <p className="lg:hidden text-sm text-muted-foreground">
+          Chat naturally to manage your finances
+        </p>
         <Button
           variant="ghost"
           size="sm"

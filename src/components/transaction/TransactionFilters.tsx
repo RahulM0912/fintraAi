@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react"
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format, startOfMonth, endOfMonth } from "date-fns"
@@ -14,9 +14,11 @@ type Props = {
   type: string
   categoryId: string
   dateRange: DateRange | undefined
+  search: string
   onTypeChange: (type: string) => void
   onCategoryChange: (categoryId: string) => void
   onDateRangeChange: (range: DateRange | undefined) => void
+  onSearchChange: (search: string) => void
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -198,8 +200,8 @@ function buildDateLabel(range: DateRange | undefined) {
 
 /* ── Main filter bar ─────────────────────────────────────────────── */
 export function TransactionFilters({
-  type, categoryId, dateRange,
-  onTypeChange, onCategoryChange, onDateRangeChange,
+  type, categoryId, dateRange, search,
+  onTypeChange, onCategoryChange, onDateRangeChange, onSearchChange,
 }: Props) {
   const [categories, setCategories]     = useState<Category[]>([])
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -207,6 +209,17 @@ export function TransactionFilters({
   const [typeOpen, setTypeOpen]         = useState(false)
   const [catSearch, setCatSearch]       = useState("")
   const searchRef = useRef<HTMLInputElement>(null)
+
+  // Local echo of the search text so typing feels instant; the parent (and the
+  // network request behind it) only hears about it after a debounce.
+  const [searchText, setSearchText] = useState(search)
+  useEffect(() => { setSearchText(search) }, [search])
+  useEffect(() => {
+    if (searchText === search) return
+    const t = setTimeout(() => onSearchChange(searchText), 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText])
 
   useEffect(() => {
     async function fetchAll() {
@@ -246,6 +259,27 @@ export function TransactionFilters({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
+
+      {/* Description search */}
+      <div className="relative flex-1 min-w-[160px] sm:flex-none sm:w-56">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <input
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="Search description…"
+          aria-label="Search transactions by description"
+          className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none focus:ring-1 focus:ring-ring transition-colors"
+        />
+        {searchText && (
+          <button
+            onClick={() => { setSearchText(""); onSearchChange("") }}
+            aria-label="Clear search"
+            className="cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
       {/* Category Filter */}
       <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
