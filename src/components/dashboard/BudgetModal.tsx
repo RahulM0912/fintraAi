@@ -53,7 +53,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
     categoryValue === OVERALL
       ? "Overall — all spending"
       : selectedCat
-      ? `${selectedCat.icon}  ${selectedCat.name}`
+      ? selectedCat.name
       : "Select a category"
 
   async function save() {
@@ -102,7 +102,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-2xl bg-[var(--surface)]">
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-xl bg-[var(--surface)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {isEdit ? "Edit budget" : "Set a monthly budget"}
@@ -139,7 +139,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
                   {expenseCategories.map((c) => (
                     <CatRow
                       key={String(c.id)}
-                      label={`${c.icon}  ${c.name}`}
+                      label={c.name}
                       active={categoryValue === String(c.id)}
                       onClick={() => { setCategoryValue(String(c.id)); setCategoryOpen(false) }}
                     />

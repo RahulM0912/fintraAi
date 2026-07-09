@@ -116,7 +116,7 @@ export function RecurringModal({ open, onOpenChange, onSaved, editing }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-2xl bg-[var(--surface)]">
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-xl bg-[var(--surface)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {isEdit ? "Edit recurring" : "New recurring transaction"}
@@ -169,7 +169,7 @@ export function RecurringModal({ open, onOpenChange, onSaved, editing }: Props) 
                     {isEdit
                       ? editing!.categoryLabel
                       : selectedCat
-                      ? `${selectedCat.icon}  ${selectedCat.name}`
+                      ? selectedCat.name
                       : "Select a category"}
                   </span>
                   {!isEdit && <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />}
@@ -185,7 +185,6 @@ export function RecurringModal({ open, onOpenChange, onSaved, editing }: Props) 
                         categoryId === String(c.id) ? "bg-muted font-medium" : ""
                       }`}
                     >
-                      <span className="text-base">{c.icon}</span>
                       <span>{c.name}</span>
                     </button>
                   ))}

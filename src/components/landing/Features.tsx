@@ -1,62 +1,72 @@
-const features = [
+import {
+  MessageSquare,
+  PieChart,
+  Tags,
+  CalendarDays,
+  ShieldCheck,
+  Moon,
+  type LucideIcon,
+} from "lucide-react";
+
+const features: { icon: LucideIcon; title: string; desc: string }[] = [
   {
-    icon: "💬",
+    icon: MessageSquare,
     title: "Chat to log",
     desc: 'Say "I spent ₹350 on auto today" and it\'s logged instantly. No tapping through forms.',
   },
   {
-    icon: "📊",
+    icon: PieChart,
     title: "Instant summaries",
     desc: 'Ask "where did I spend the most?" and get a clear breakdown in seconds.',
   },
   {
-    icon: "🗂️",
+    icon: Tags,
     title: "Category breakdown",
     desc: "Food, travel, utilities, entertainment — auto-categorised as you log.",
   },
   {
-    icon: "📅",
+    icon: CalendarDays,
     title: "Monthly analytics",
-    desc: "Visual reports of your income vs expenses, month by month.",
+    desc: "Quiet, readable reports of income against spending, month by month.",
   },
   {
-    icon: "✅",
-    title: "Human-in-loop",
-    desc: "For large or destructive actions, Fintra asks you to confirm first.",
+    icon: ShieldCheck,
+    title: "Asks before it acts",
+    desc: "For large or destructive changes, Fintra checks with you first.",
   },
   {
-    icon: "🌙",
-    title: "Dark & light mode",
-    desc: "Looks great at midnight or midday — your dashboard, your preference.",
+    icon: Moon,
+    title: "Light & dark",
+    desc: "Warm paper by day, warm charcoal by night — your ledger, either way.",
   },
 ];
 
 export function Features() {
   return (
-    <section className="py-[70px] px-4 md:px-8 max-w-[1100px] mx-auto" id="features">
-      <p className="text-[0.8rem] font-semibold tracking-[.1em] uppercase text-[var(--ld-purple)] mb-2.5">
-        Features
-      </p>
-      <h2 className="font-sora text-3xl md:text-[2rem] font-bold text-[var(--ld-text)] mb-3">
-        Everything you need,<br />nothing you don&apos;t
+    <section className="mx-auto max-w-[1100px] px-4 py-[70px] md:px-8" id="features">
+      <div className="flex items-center gap-3">
+        <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+          Features
+        </p>
+      </div>
+      <h2 className="font-display mt-4 mb-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-[2.1rem]">
+        Everything you need,
+        <br />
+        nothing you don&apos;t
       </h2>
-      <p className="text-[var(--ld-text2)] text-base mb-10 max-w-[500px]">
-        Fintra keeps it simple — just chat and it handles the rest.
+      <p className="mb-12 max-w-[500px] text-base text-[var(--ink-2)]">
+        Fintra keeps it simple — just talk, and it keeps the ledger.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((feat) => (
-          <div
-            key={feat.title}
-            className="bg-[var(--ld-surface)] border border-[var(--ld-border)] rounded-[14px] p-6 hover:border-[var(--ld-purple-border)] hover:-translate-y-0.5 transition-all duration-200"
-          >
-            <div className="w-[42px] h-[42px] rounded-[10px] bg-[var(--ld-purple-bg)] border border-[var(--ld-purple-border)] flex items-center justify-center text-lg mb-4">
-              {feat.icon}
-            </div>
-            <h3 className="font-sora text-[0.95rem] font-semibold text-[var(--ld-text)] mb-1.5">
+          <div key={feat.title} className="border-t border-[var(--hairline)] pt-5">
+            <feat.icon className="h-5 w-5 text-[var(--brand)]" aria-hidden />
+            <h3 className="mt-3 mb-1.5 text-[0.95rem] font-semibold text-[var(--ink)]">
               {feat.title}
             </h3>
-            <p className="text-[0.85rem] text-[var(--ld-text2)] leading-[1.55]">
+            <p className="text-[0.875rem] leading-[1.6] text-[var(--ink-2)]">
               {feat.desc}
             </p>
           </div>

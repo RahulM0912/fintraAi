@@ -253,8 +253,8 @@ export function TransactionFilters({
     : categories
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
-  const categoryLabel    = selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : "All Categories"
-  const typeLabel        = type === "income" ? "Income" : type === "expense" ? "Expense" : "Transaction Type"
+  const categoryLabel    = selectedCategory ? selectedCategory.name : "All categories"
+  const typeLabel        = type === "income" ? "Income" : type === "expense" ? "Expense" : "All types"
   const dateLabel        = buildDateLabel(dateRange)
 
   return (
@@ -268,7 +268,7 @@ export function TransactionFilters({
           onChange={(e) => setSearchText(e.target.value)}
           placeholder="Search description…"
           aria-label="Search transactions by description"
-          className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none focus:ring-1 focus:ring-ring transition-colors"
+          className="h-11 w-full rounded-lg border border-input bg-transparent pl-9 pr-8 text-sm outline-none transition-colors duration-150 focus:ring-2 focus:ring-ring/50"
         />
         {searchText && (
           <button
@@ -284,7 +284,7 @@ export function TransactionFilters({
       {/* Category Filter */}
       <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             <SlidersHorizontal className="h-3.5 w-3.5" />
             {categoryLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />
@@ -323,10 +323,9 @@ export function TransactionFilters({
                     <button
                       key={cat.id}
                       onClick={() => { onCategoryChange(cat.id); setCategoryOpen(false) }}
-                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2 ${categoryId === cat.id ? "bg-muted font-medium" : ""}`}
+                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${categoryId === cat.id ? "bg-muted font-medium" : ""}`}
                     >
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
+                      {cat.name}
                     </button>
                   ))}
                 </div>
@@ -339,7 +338,7 @@ export function TransactionFilters({
       {/* Type Filter */}
       <Popover open={typeOpen} onOpenChange={setTypeOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             {typeLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
@@ -360,7 +359,7 @@ export function TransactionFilters({
       {/* Month-range picker — unified for all screen sizes */}
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             <CalendarIcon className="h-3.5 w-3.5" />
             {dateLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />

@@ -155,33 +155,6 @@
   --sidebar-primary-foreground: #14231b;
 }
 
-/* ── Legacy --ld-* aliases (landing/auth still consume these).
-     Values now point at the editorial palette; the purple is gone.
-     TODO(phase 2): rename usages to semantic tokens and delete. ── */
-:root,
-.dark {
-  --ld-bg: var(--app-bg);
-  --ld-bg2: var(--surface);
-  --ld-bg3: var(--surface-2);
-  --ld-bg4: var(--surface-2);
-  --ld-surface: var(--surface);
-  --ld-surface2: var(--surface-2);
-  --ld-border: var(--hairline);
-  --ld-border2: var(--hairline-strong);
-  --ld-text: var(--ink);
-  --ld-text2: var(--ink-2);
-  --ld-text3: var(--ink-3);
-  --ld-purple: var(--brand);
-  --ld-purple2: var(--brand-hover);
-  --ld-purple-bg: var(--brand-bg);
-  --ld-purple-border: var(--brand-border);
-  --ld-green: var(--pos);
-  --ld-green-bg: var(--pos-bg);
-  --ld-red: var(--neg);
-  --ld-red-bg: var(--neg-bg);
-  --ld-accent-glow: transparent;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -197,13 +170,6 @@
 @layer utilities {
   /* Display serif — headings and typeset monetary figures */
   .font-display {
-    font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
-    font-variant-numeric: lining-nums;
-  }
-  /* Transitional alias: pre-redesign screens used .font-sora for
-     headings; they now inherit the display serif until each screen
-     is reworked. TODO(phase 2): replace usages with .font-display. */
-  .font-sora {
     font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
     font-variant-numeric: lining-nums;
   }

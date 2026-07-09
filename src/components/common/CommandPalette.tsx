@@ -110,7 +110,7 @@ export function CommandPalette({ open, onOpenChange, onQuickAdd }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="top-[15%] translate-y-0 max-w-[calc(100%-2rem)] sm:max-w-xl p-0 gap-0 overflow-hidden rounded-2xl bg-[var(--surface)] border border-[var(--hairline)]"
+        className="top-[15%] translate-y-0 max-w-[calc(100%-2rem)] sm:max-w-xl p-0 gap-0 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--hairline)]"
       >
         <DialogTitle className="sr-only">Command palette and quick add</DialogTitle>
 

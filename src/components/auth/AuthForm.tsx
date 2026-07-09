@@ -118,23 +118,20 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {/* Brand */}
       <Link
         href="/"
-        className="mb-8 flex items-center justify-center gap-2 font-sora text-2xl font-bold text-indigo-700 dark:text-indigo-400"
+        className="font-display mb-8 block text-center text-2xl font-semibold tracking-tight text-[var(--ink)]"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-700 text-base font-bold text-white">
-          ✦
-        </span>
         Fintra
       </Link>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-6 sm:p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h1 className="font-display text-xl font-semibold text-[var(--ink)]">
             {isSignUp ? "Create your account" : "Welcome back"}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-[var(--ink-2)]">
             {isSignUp
-              ? "Start tracking your money in seconds"
-              : "Sign in to continue to your dashboard"}
+              ? "Start the record in seconds"
+              : "Sign in to pick up the ledger"}
           </p>
         </div>
 
@@ -155,13 +152,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </Button>
 
         <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200 dark:bg-zinc-800" />
-          <span className="text-xs text-muted-foreground">or</span>
-          <div className="h-px flex-1 bg-gray-200 dark:bg-zinc-800" />
+          <div className="h-px flex-1 bg-[var(--hairline)]" />
+          <span className="text-xs text-[var(--ink-3)]">or</span>
+          <div className="h-px flex-1 bg-[var(--hairline)]" />
         </div>
 
         {info ? (
-          <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-400">
+          <div className="flex items-start gap-2 rounded-lg border border-[var(--brand-border)] bg-[var(--pos-bg)] p-3 text-sm text-[var(--pos)]">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{info}</span>
           </div>
@@ -234,7 +231,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </div>
 
             {error && (
-              <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+              <p className="rounded-lg border border-[var(--neg)]/40 bg-[var(--neg-bg)] p-3 text-sm text-[var(--neg)]">
                 {error}
               </p>
             )}
@@ -255,7 +252,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
         <Link
           href={isSignUp ? "/sign-in" : "/sign-up"}
-          className="font-medium text-indigo-700 hover:underline dark:text-indigo-400"
+          className="font-medium text-[var(--brand)] hover:underline"
         >
           {isSignUp ? "Sign in" : "Sign up"}
         </Link>

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, Database, Loader2 } from "lucide-react";
+import { Download, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function DataSection() {
@@ -59,11 +59,10 @@ export function DataSection() {
   }
 
   return (
-    <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Database className="h-4 w-4 text-[var(--ink-3)]" />
-        <h2 className="font-sora text-sm font-semibold text-[var(--ink)]">Data</h2>
-      </div>
+    <section className="border-t border-[var(--hairline)] pt-6">
+      <h2 className="mb-5 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+        Data
+      </h2>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 py-1">

@@ -283,27 +283,23 @@ const ALERT_STYLES: Record<
   { container: string; icon: string; Icon: React.ComponentType<{ className?: string }> }
 > = {
   warning: {
-    container:
-      "border-red-200 bg-red-50 text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100",
-    icon: "text-red-500 dark:text-red-400",
+    container: "border-[var(--neg)]/40 bg-[var(--neg-bg)]/60 text-[var(--ink)]",
+    icon: "text-[var(--neg)]",
     Icon: AlertTriangle,
   },
   caution: {
-    container:
-      "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-100",
-    icon: "text-rose-600 dark:text-rose-400",
+    container: "border-[var(--neg)]/40 bg-[var(--neg-bg)]/60 text-[var(--ink)]",
+    icon: "text-[var(--neg)]",
     Icon: OctagonAlert,
   },
   tip: {
-    container:
-      "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-100",
-    icon: "text-emerald-600 dark:text-emerald-400",
+    container: "border-[var(--brand-border)] bg-[var(--pos-bg)]/60 text-[var(--ink)]",
+    icon: "text-[var(--pos)]",
     Icon: Lightbulb,
   },
   note: {
-    container:
-      "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-100",
-    icon: "text-sky-600 dark:text-sky-400",
+    container: "border-[var(--hairline-strong)] bg-[var(--surface-2)]/60 text-[var(--ink)]",
+    icon: "text-[var(--ink-2)]",
     Icon: Info,
   },
 };

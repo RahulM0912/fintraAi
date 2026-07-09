@@ -16,6 +16,10 @@ import { toast } from "sonner"
 import { TransactionModal } from "@/components/common/TransactionModal"
 import { format } from "date-fns"
 
+/* The transactions list as an editorial ledger: flat rows on the paper
+   background, a small-caps header rule, tabular signed amounts. No card
+   chrome, no icon chips, no colored side-bars. */
+
 type Transaction = {
   id: string
   amount: number
@@ -41,7 +45,7 @@ type Props = {
   onRefresh: () => void
 }
 
-const COLS = "grid-cols-[1.4fr_1.6fr_1.2fr_1fr_100px]"
+const COLS = "grid-cols-[7rem_1.8fr_1.2fr_8rem_5.5rem]"
 
 function DeleteConfirmDialog({
   open,
@@ -60,19 +64,19 @@ function DeleteConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete Transaction</DialogTitle>
+          <DialogTitle className="font-display">Delete transaction</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Are you sure you want to delete{" "}
+          Delete{" "}
           <span className="font-medium text-foreground">&quot;{transactionLabel}&quot;</span>?
-          This action cannot be undone and will update your history.
+          This removes it from your history and can&apos;t be undone.
         </p>
         <DialogFooter className="gap-2 pt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isDeleting}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? "Deleting…" : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -105,23 +109,23 @@ function PaginationBar({
   }
 
   return (
-    <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4">
-      <p className="text-xs sm:text-sm text-muted-foreground">
-        Showing {start} to {end} of {total} transactions
+    <div className="flex flex-col-reverse items-center justify-between gap-3 border-t border-[var(--hairline)] pt-4 sm:flex-row">
+      <p className="tnum text-[13px] text-[var(--ink-3)]">
+        {start}–{end} of {total}
       </p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={!hasPrev}
           aria-label="Previous page"
-          className="cursor-pointer h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-2)] transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         {getPages().map((p, i) =>
           p === "..." ? (
-            <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground text-sm">
-              ...
+            <span key={`ellipsis-${i}`} className="px-1 text-sm text-[var(--ink-3)]">
+              …
             </span>
           ) : (
             <button
@@ -129,10 +133,10 @@ function PaginationBar({
               onClick={() => onPageChange(p as number)}
               aria-label={`Page ${p}`}
               aria-current={p === page ? "page" : undefined}
-              className={`cursor-pointer h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors ${
+              className={`cursor-pointer tnum flex h-10 w-10 items-center justify-center rounded-lg text-sm transition-colors duration-150 ${
                 p === page
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-foreground"
+                  ? "font-semibold text-[var(--ink)] underline decoration-[var(--brand)] decoration-2 underline-offset-8"
+                  : "text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
               }`}
             >
               {p}
@@ -143,7 +147,7 @@ function PaginationBar({
           onClick={() => onPageChange(page + 1)}
           disabled={!hasNext}
           aria-label="Next page"
-          className="cursor-pointer h-8 w-8 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-2)] transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -152,53 +156,41 @@ function PaginationBar({
   )
 }
 
-/* ─── Mobile card skeleton ─────────────────────────────────────── */
-function MobileSkeletonCard() {
+function SkeletonRow() {
   return (
-    <div className="p-4 border-b last:border-0">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
-          <div className="space-y-1.5 min-w-0">
-            <Skeleton className="h-3.5 w-28" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        </div>
-        <Skeleton className="h-4 w-16 shrink-0" />
-      </div>
-      <Skeleton className="h-3 w-40 mt-3" />
-      <div className="flex items-center justify-between mt-3">
-        <Skeleton className="h-3 w-24" />
-        <div className="flex gap-1.5">
-          <Skeleton className="h-7 w-7 rounded-md" />
-          <Skeleton className="h-7 w-7 rounded-md" />
-        </div>
+    <div className="border-b border-[var(--hairline)] py-4">
+      <div className="flex items-center justify-between gap-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-4 flex-1" />
+        <Skeleton className="h-4 w-20" />
       </div>
     </div>
   )
 }
 
-/* ─── Desktop row skeleton ─────────────────────────────────────── */
-function DesktopSkeletonRow() {
+function RowActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void
+  onDelete: () => void
+}) {
   return (
-    <div className={`hidden md:grid ${COLS} px-6 py-4 border-b last:border-0 items-center`}>
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
-        <div className="space-y-1.5">
-          <Skeleton className="h-3.5 w-28" />
-          <Skeleton className="h-3 w-16" />
-        </div>
-      </div>
-      <Skeleton className="h-3.5 w-24" />
-      <div className="space-y-1.5">
-        <Skeleton className="h-3.5 w-24" />
-        <Skeleton className="h-3 w-16" />
-      </div>
-      <Skeleton className="h-4 w-20 ml-auto" />
-      <div className="flex gap-1.5 justify-end">
-        <Skeleton className="h-7 w-7 rounded-md" />
-        <Skeleton className="h-7 w-7 rounded-md" />
-      </div>
+    <div className="flex items-center justify-end gap-0.5">
+      <button
+        onClick={onEdit}
+        aria-label="Edit transaction"
+        className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
+      <button
+        onClick={onDelete}
+        aria-label="Delete transaction"
+        className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--neg-bg)] hover:text-[var(--neg)]"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   )
 }
@@ -225,168 +217,108 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
     }
   }
 
-  /* ── Desktop table header ── */
-  const tableHeader = (
-    <div className={`hidden md:grid ${COLS} px-6 py-3 border-b bg-muted/40`}>
-      {["CATEGORY", "DESCRIPTION", "DATE & TIME", "AMOUNT", "ACTIONS"].map((h) => (
-        <div
-          key={h}
-          className={`text-xs font-semibold text-muted-foreground tracking-wider uppercase ${
-            h === "AMOUNT" || h === "ACTIONS" ? "text-right" : ""
-          }`}
-        >
-          {h}
-        </div>
-      ))}
-    </div>
-  )
-
   return (
     <>
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--hairline)] shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none overflow-hidden">
-        {tableHeader}
+      <div>
+        {/* Ledger header — desktop only */}
+        <div
+          className={`hidden md:grid ${COLS} items-center gap-4 border-b border-[var(--hairline-strong)] pb-2`}
+        >
+          {["Date", "Description", "Category", "Amount", ""].map((h, i) => (
+            <div
+              key={i}
+              className={`text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)] ${
+                h === "Amount" ? "text-right" : ""
+              }`}
+            >
+              {h}
+            </div>
+          ))}
+        </div>
 
         {/* Loading skeletons */}
-        {isLoading && Array.from({ length: 5 }).map((_, i) => (
-          <div key={i}>
-            {/* Mobile skeleton */}
-            <div className="md:hidden">
-              <MobileSkeletonCard />
-            </div>
-            {/* Desktop skeleton */}
-            <DesktopSkeletonRow />
-          </div>
-        ))}
+        {isLoading &&
+          Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
         {/* Empty state */}
         {!isLoading && transactions.length === 0 && (
-          <div className="p-16 text-center">
-            <p className="text-muted-foreground text-sm">No transactions match these filters.</p>
-            <p className="text-muted-foreground/70 text-xs mt-1">Try a different period or clear the search.</p>
-            <Button
-              onClick={() => openAdd("expense")}
-              className="mt-5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg"
-            >
-              <PlusIcon className="mr-2 h-4 w-4" /> Add transaction
+          <div className="py-16 text-center">
+            <p className="font-display text-lg text-[var(--ink)]">
+              Nothing in this view.
+            </p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--ink-2)]">
+              Try a wider period or clear the search — or add the first entry
+              and start the record.
+            </p>
+            <Button onClick={() => openAdd("expense")} className="mt-6 min-h-11 px-5">
+              <PlusIcon className="mr-1 h-4 w-4" /> Add transaction
             </Button>
           </div>
         )}
 
-        {/* Transaction rows */}
-        {!isLoading && transactions.map((tx) => {
-          const txDate = new Date(tx.date)
-          const dateStr = format(txDate, "MMM dd, yyyy")
-          const timeStr = format(txDate, "hh:mm aa")
-          const isIncome = tx.type === "income"
+        {/* Ledger rows */}
+        {!isLoading &&
+          transactions.map((tx) => {
+            const txDate = new Date(tx.date)
+            const isIncome = tx.type === "income"
+            const amount = (
+              <span
+                className={`tnum text-sm font-medium ${
+                  isIncome ? "text-[var(--pos)]" : "text-[var(--ink)]"
+                }`}
+              >
+                {isIncome ? "+" : "−"}₹
+                {tx.amount.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            )
 
-          return (
-            <div key={tx.id} className="relative border-b last:border-0 hover:bg-muted/20 transition-colors">
-              {/* Income/expense accent bar */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIncome ? "bg-[var(--pos)]" : "bg-[var(--neg)]"}`} />
-
-              {/* ── Mobile card layout (< md) ── */}
-              <div className="md:hidden px-4 py-3.5 pl-5">
-                {/* Row 1: icon + category name | amount */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${isIncome ? "bg-[var(--pos-bg)]" : "bg-[var(--surface-2)]"}`}>
-                      {tx.category.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm leading-tight truncate">{tx.category.name}</p>
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{tx.type}</p>
-                    </div>
+            return (
+              <div key={tx.id} className="border-b border-[var(--hairline)]">
+                {/* ── Mobile ledger row (< md) ── */}
+                <div className="flex items-start justify-between gap-3 py-3.5 md:hidden">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--ink)]">
+                      {tx.description || tx.category.name}
+                    </p>
+                    <p className="tnum mt-1 text-xs text-[var(--ink-3)]">
+                      {format(txDate, "dd MMM yyyy")} · {tx.category.name}
+                    </p>
                   </div>
-                  <span className={`font-bold text-sm shrink-0 ${isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
-                    {isIncome ? "+" : "-"}₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {amount}
+                    <RowActions
+                      onEdit={() => setEditTx(tx)}
+                      onDelete={() => setDeleteTx(tx)}
+                    />
+                  </div>
                 </div>
 
-                {/* Row 2: description */}
-                {tx.description && (
-                  <p className="text-xs text-muted-foreground mt-2 truncate">{tx.description}</p>
-                )}
-
-                {/* Row 3: date | actions */}
-                <div className="flex items-center justify-between mt-2.5 gap-2">
-                  <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 hover:bg-muted"
-                      onClick={() => setEditTx(tx)}
-                      title="Edit transaction"
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      onClick={() => setDeleteTx(tx)}
-                      title="Delete transaction"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                {/* ── Desktop ledger row (≥ md) ── */}
+                <div className={`hidden md:grid ${COLS} items-center gap-4 py-3`}>
+                  <div className="tnum text-[13px] leading-snug text-[var(--ink-3)]">
+                    <div>{format(txDate, "dd MMM yyyy")}</div>
+                    <div className="text-xs">{format(txDate, "hh:mm aa")}</div>
                   </div>
+                  <div className="truncate text-sm font-medium text-[var(--ink)]">
+                    {tx.description || (
+                      <span className="font-normal text-[var(--ink-3)]">—</span>
+                    )}
+                  </div>
+                  <div className="truncate text-sm text-[var(--ink-2)]">
+                    {tx.category.name}
+                  </div>
+                  <div className="text-right">{amount}</div>
+                  <RowActions
+                    onEdit={() => setEditTx(tx)}
+                    onDelete={() => setDeleteTx(tx)}
+                  />
                 </div>
               </div>
-
-              {/* ── Desktop table row (≥ md) ── */}
-              <div className={`hidden md:grid ${COLS} px-6 py-4 items-center gap-0`}>
-                {/* Category */}
-                <div className="flex items-center gap-3 pl-1">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${isIncome ? "bg-[var(--pos-bg)]" : "bg-[var(--surface-2)]"}`}>
-                    {tx.category.icon}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm leading-tight">{tx.category.name}</p>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{tx.type}</p>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="text-sm text-muted-foreground truncate pr-2">
-                  {tx.description || <span className="text-muted-foreground/40 italic">—</span>}
-                </div>
-
-                {/* Date & Time */}
-                <div className="text-sm text-muted-foreground leading-tight">
-                  <div>{dateStr}</div>
-                  <div className="text-xs">{timeStr}</div>
-                </div>
-
-                {/* Amount */}
-                <div className={`font-semibold text-sm text-right ${isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
-                  {isIncome ? "+" : "-"}₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 justify-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 hover:bg-muted"
-                    onClick={() => setEditTx(tx)}
-                    title="Edit transaction"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    onClick={() => setDeleteTx(tx)}
-                    title="Delete transaction"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
       </div>
 
       {pagination && pagination.total > 0 && (

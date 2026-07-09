@@ -82,7 +82,7 @@ export function AiKeyModal({ open, onOpenChange, onSaved, current }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-2xl bg-[var(--surface)]">
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-xl bg-[var(--surface)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">Bring your own key</DialogTitle>
           <p className="text-sm text-[var(--ink-3)]">

@@ -25,7 +25,7 @@ export function SuggestionChips({ suggestions, variant = "pill", disabled, onSel
           <Button
             key={idx}
             variant="outline"
-            className="h-7 rounded-full px-3 text-xs"
+            className="h-8 rounded-full px-3 text-xs"
             onClick={() => onSelect(prompt ?? label)}
             disabled={disabled}
           >
@@ -44,9 +44,9 @@ export function SuggestionChips({ suggestions, variant = "pill", disabled, onSel
           key={idx}
           onClick={() => onSelect(prompt ?? label)}
           disabled={disabled}
-          className="flex cursor-pointer items-start gap-2 rounded-xl border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--hairline)] px-3 py-2.5 text-left text-sm transition-colors duration-150 ease-out hover:border-[var(--hairline-strong)] hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
           <div>
             <div className="font-medium">{label}</div>
             {description && (

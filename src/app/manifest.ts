@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Tell Fintra what you spent. It logs it and shows you where your money goes.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0b0b12",
-    theme_color: "#5b52e8",
+    background_color: "#f7f4ec",
+    theme_color: "#2e5f4c",
     orientation: "portrait",
     categories: ["finance", "productivity"],
     icons: [

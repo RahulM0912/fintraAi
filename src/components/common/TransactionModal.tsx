@@ -197,9 +197,9 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-lg rounded-2xl px-6 py-4 sm:px-8 sm:py-7 bg-white dark:bg-zinc-900 max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-lg rounded-xl px-6 py-4 sm:px-8 sm:py-7 bg-[var(--surface)] max-h-[90dvh] overflow-y-auto">
         <DialogHeader className="pb-0 sm:pb-1">
-          <DialogTitle className="text-lg sm:text-2xl font-bold leading-tight">
+          <DialogTitle className="font-display text-lg sm:text-2xl font-semibold leading-tight">
             {isEditMode ? "Edit " : "Create a "}
             <span className={isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}>
               {isEditMode ? (isIncome ? "income" : "expense") : `new ${isIncome ? "income" : "expense"}`}
@@ -315,7 +315,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                   <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className={selectedCategory ? "text-foreground" : "text-muted-foreground"}>
                     {selectedCategory
-                      ? `${selectedCategory.icon}  ${selectedCategory.name}`
+                      ? selectedCategory.name
                       : "Select a category"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
@@ -344,7 +344,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                         categoryId === String(c.id) ? "bg-muted font-medium" : ""
                       }`}
                     >
-                      <span className="text-base">{c.icon}</span>
                       <span>{c.name}</span>
                     </button>
                   ))}

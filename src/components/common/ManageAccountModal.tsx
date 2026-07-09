@@ -81,7 +81,7 @@ export function ManageAccountModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[480px] rounded-2xl">
+      <DialogContent className="sm:max-w-[480px] rounded-xl">
         <DialogHeader>
           <DialogTitle>Manage Account</DialogTitle>
           <DialogDescription>
@@ -93,7 +93,7 @@ export function ManageAccountModal({ open, onClose }: Props) {
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
             <AvatarImage src={avatarUrl} alt={displayName} />
-            <AvatarFallback className="bg-indigo-900 text-white text-sm font-semibold">
+            <AvatarFallback className="bg-[var(--surface-2)] text-sm font-medium text-[var(--ink)]">
               {initials}
             </AvatarFallback>
           </Avatar>

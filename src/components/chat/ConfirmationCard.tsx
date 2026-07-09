@@ -16,7 +16,7 @@ interface DestructiveProps {
 
 export function DestructiveConfirmation({ data, onResolve, disabled }: DestructiveProps) {
   return (
-    <div className="mt-3 rounded-xl border-2 border-destructive/40 bg-destructive/5 p-3">
+    <div className="mt-3 rounded-lg border border-[var(--neg)]/40 bg-[var(--neg-bg)]/60 p-3">
       <div className="mb-2 flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
         <div>
@@ -63,11 +63,11 @@ interface LargeAmountProps {
 
 export function LargeAmountConfirmation({ data, onResolve, disabled }: LargeAmountProps) {
   return (
-    <div className="mt-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-3">
+    <div className="mt-3 rounded-lg border border-[var(--neg)]/40 bg-[var(--neg-bg)]/60 p-3">
       <div className="mb-2 flex items-start gap-2">
-        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--neg)]" />
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[var(--neg)]">
             {data.question}
           </div>
           <div className="mt-1 text-sm">

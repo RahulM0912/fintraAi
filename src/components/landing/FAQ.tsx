@@ -5,7 +5,7 @@ import { useState } from "react";
 const faqs = [
   {
     q: "What counts as an AI message?",
-    a: "Every message you send to Fintra AI counts as one — whether you're adding a transaction, asking for a summary, or editing something. One message = one, regardless of how much you write in it. Adding or editing transactions manually doesn't count.",
+    a: "Every message you send to Fintra counts as one — whether you're adding a transaction, asking for a summary, or editing something. One message = one, regardless of how much you write in it. Adding or editing transactions manually doesn't count.",
   },
   {
     q: "What happens when I run out of AI messages?",
@@ -25,44 +25,48 @@ export function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="py-[70px] px-4 md:px-8 max-w-[1100px] mx-auto text-center" id="faq">
-      <p className="text-[0.8rem] font-semibold tracking-[.1em] uppercase text-[var(--ld-purple)] mb-2.5 inline-block">
-        FAQ
-      </p>
-      <h2 className="font-sora text-3xl md:text-[2rem] font-bold text-[var(--ld-text)] mb-0">
-        Questions answered
-      </h2>
+    <section className="mx-auto max-w-[1100px] px-4 py-[70px] md:px-8" id="faq">
+      <div className="mx-auto max-w-[680px]">
+        <div className="flex items-center gap-3">
+          <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+            FAQ
+          </p>
+        </div>
+        <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-[2.1rem]">
+          Questions, answered
+        </h2>
 
-      <div className="flex flex-col gap-3 max-w-[680px] mx-auto mt-10 text-left">
-        {faqs.map((faq, i) => (
-          <div
-            key={i}
-            className="bg-[var(--ld-surface)] border border-[var(--ld-border)] rounded-xl overflow-hidden"
-          >
-            <button
-              onClick={() => setOpen(open === i ? null : i)}
-              className="w-full px-5 py-4 flex justify-between items-center text-[0.95rem] font-medium text-[var(--ld-text)] text-left hover:text-[var(--ld-purple)] transition-colors duration-200 cursor-pointer"
-            >
-              {faq.q}
-              <span
-                className={`text-[var(--ld-text3)] text-lg flex-shrink-0 ml-4 transition-transform duration-300 ${
-                  open === i ? "rotate-45" : ""
+        <div className="mt-10 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)]">
+          {faqs.map((faq, i) => (
+            <div key={i}>
+              <button
+                onClick={() => setOpen(open === i ? null : i)}
+                aria-expanded={open === i}
+                className="flex min-h-11 w-full cursor-pointer items-center justify-between py-4 text-left text-[0.95rem] font-medium text-[var(--ink)] transition-colors duration-150 hover:text-[var(--brand)]"
+              >
+                {faq.q}
+                <span
+                  aria-hidden
+                  className={`ml-4 shrink-0 text-lg text-[var(--ink-3)] transition-transform duration-200 ease-out ${
+                    open === i ? "rotate-45" : ""
+                  }`}
+                >
+                  +
+                </span>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  open === i ? "max-h-[260px] pb-5" : "max-h-0"
                 }`}
               >
-                +
-              </span>
-            </button>
-            <div
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                open === i ? "max-h-[260px] pb-4" : "max-h-0"
-              }`}
-            >
-              <p className="px-5 text-[0.875rem] text-[var(--ld-text2)] leading-[1.7]">
-                {faq.a}
-              </p>
+                <p className="text-[0.875rem] leading-[1.7] text-[var(--ink-2)]">
+                  {faq.a}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

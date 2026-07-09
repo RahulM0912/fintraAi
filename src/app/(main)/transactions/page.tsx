@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { TransactionFilters } from "@/components/transaction/TransactionFilters"
 import { TransactionTable } from "@/components/transaction/TransactionTable"
 import { useQuickAdd } from "@/components/common/QuickAddProvider"
@@ -105,42 +104,53 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="mx-auto max-w-5xl px-5 pt-6 pb-10 sm:px-8 lg:pt-12 lg:pb-16">
       {/* Page title — mobile gets it from the app header; add via bottom-nav "+" */}
       <div className="hidden lg:flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-sora text-[26px] font-bold tracking-tight text-[var(--ink)]">Transactions</h1>
-          <p className="text-sm text-[var(--ink-2)] mt-0.5">Search, filter, and manage your records.</p>
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+              The ledger
+            </p>
+          </div>
+          <h1 className="font-display mt-3 text-[32px] font-semibold tracking-tight text-[var(--ink)]">
+            Transactions
+          </h1>
         </div>
-        <Button
+        <button
           onClick={() => openAdd("expense")}
-          className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm transition-colors duration-200 shrink-0"
+          className="cursor-pointer inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-[var(--hairline-strong)] px-4 text-sm font-medium text-[var(--ink-2)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)] hover:text-[var(--ink)]"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Transaction
-        </Button>
+          <Plus className="h-4 w-4" aria-hidden /> Add transaction
+        </button>
       </div>
 
       {/* Filter bar */}
-      <TransactionFilters
-        type={type}
-        categoryId={categoryId}
-        dateRange={dateRange}
-        search={search}
-        onTypeChange={handleTypeChange}
-        onCategoryChange={handleCategoryChange}
-        onDateRangeChange={handleDateRangeChange}
-        onSearchChange={handleSearchChange}
-      />
+      <div className="mt-0 lg:mt-8">
+        <TransactionFilters
+          type={type}
+          categoryId={categoryId}
+          dateRange={dateRange}
+          search={search}
+          onTypeChange={handleTypeChange}
+          onCategoryChange={handleCategoryChange}
+          onDateRangeChange={handleDateRangeChange}
+          onSearchChange={handleSearchChange}
+        />
+      </div>
 
       {/* Transaction table — global quick-add modal fires "transaction-added",
           which the effect above listens to, so creates refresh this list */}
-      <TransactionTable
-        transactions={transactions}
-        pagination={pagination}
-        isLoading={isLoading}
-        onPageChange={(p) => setPage(p)}
-        onRefresh={fetchTransactions}
-      />
+      <div className="mt-6">
+        <TransactionTable
+          transactions={transactions}
+          pagination={pagination}
+          isLoading={isLoading}
+          onPageChange={(p) => setPage(p)}
+          onRefresh={fetchTransactions}
+        />
+      </div>
     </div>
   )
 }

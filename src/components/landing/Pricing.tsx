@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 
 const features = [
   "Natural-language AI assistant",
@@ -9,64 +10,59 @@ const features = [
   "Light & dark mode",
 ];
 
-function Check() {
-  return (
-    <span className="flex-shrink-0 text-[var(--ld-green)] text-sm">✓</span>
-  );
-}
-
 export function Pricing() {
   return (
-    <section className="py-[70px] px-4 md:px-8 max-w-[1100px] mx-auto text-center" id="pricing">
-      <p className="text-[0.8rem] font-semibold tracking-[.1em] uppercase text-[var(--ld-purple)] mb-2.5 inline-block">
-        Pricing
-      </p>
-      <h2 className="font-sora text-3xl md:text-[2rem] font-bold text-[var(--ld-text)] mb-3">
+    <section className="mx-auto max-w-[1100px] px-4 py-[70px] text-center md:px-8" id="pricing">
+      <div className="inline-flex items-center gap-3">
+        <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+          Pricing
+        </p>
+      </div>
+      <h2 className="font-display mt-4 mb-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-[2.1rem]">
         Free while we&apos;re in early access
       </h2>
-      <p className="text-[var(--ld-text2)] text-base mb-10 max-w-[520px] mx-auto">
+      <p className="mx-auto mb-12 max-w-[520px] text-base text-[var(--ink-2)]">
         Everything Fintra does is free right now. Use the built-in AI on us, or
         connect your own API key for unlimited chat.
       </p>
 
-      <div className="max-w-[420px] mx-auto">
-        <div className="relative bg-[var(--ld-surface)] border-2 border-[var(--ld-purple)] rounded-2xl p-8 text-left">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--ld-purple)] text-white text-[0.75rem] font-semibold font-sora px-3.5 py-0.5 rounded-full whitespace-nowrap">
+      <div className="mx-auto max-w-[420px]">
+        <div className="rounded-xl border border-[var(--hairline-strong)] bg-[var(--surface)] p-8 text-left">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--brand)]">
             Early access
+          </p>
+          <div className="font-display tnum mt-4 mb-1 flex items-baseline gap-1 text-[2.8rem] font-semibold text-[var(--ink)]">
+            ₹0 <span className="font-sans text-base font-normal text-[var(--ink-2)]">/month</span>
           </div>
+          <p className="mb-6 text-[0.83rem] text-[var(--ink-2)]">
+            50 AI messages a month included
+          </p>
 
-          <p className="font-sora text-base font-semibold text-[var(--ld-text2)] mb-2">Free</p>
-          <div className="font-sora text-[2.6rem] font-bold text-[var(--ld-text)] mb-1 flex items-baseline gap-1">
-            ₹0 <span className="text-base font-normal text-[var(--ld-text2)]">/month</span>
-          </div>
-          <div className="text-[0.82rem] text-[var(--ld-text2)] mb-6 px-2.5 py-1.5 bg-[var(--ld-bg3)] rounded-md inline-block">
-            50 AI messages / month included
-          </div>
-
-          <ul className="flex flex-col gap-2.5 mb-6">
+          <ul className="mb-7 flex flex-col gap-2.5 border-t border-[var(--hairline)] pt-5">
             {features.map((f) => (
-              <li key={f} className="text-[0.9rem] text-[var(--ld-text2)] flex items-center gap-2">
-                <Check /> {f}
+              <li key={f} className="flex items-center gap-2.5 text-[0.9rem] text-[var(--ink-2)]">
+                <Check className="h-4 w-4 shrink-0 text-[var(--pos)]" aria-hidden /> {f}
               </li>
             ))}
           </ul>
 
           <Link
             href="/sign-up"
-            className="block w-full py-3 rounded-[10px] text-[0.95rem] font-semibold font-sora text-center bg-[var(--ld-purple)] text-white hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
+            className="flex min-h-12 w-full items-center justify-center rounded-lg bg-[var(--brand)] text-[0.95rem] font-medium text-[var(--primary-foreground)] transition-colors duration-150 ease-out hover:bg-[var(--brand-hover)]"
           >
-            Get started free →
+            Get started free
           </Link>
         </div>
 
         {/* BYO-key note */}
-        <p className="mt-4 text-[0.83rem] text-[var(--ld-text3)] leading-relaxed">
+        <p className="mt-5 text-[0.83rem] leading-relaxed text-[var(--ink-3)]">
           Need more than 50 messages?{" "}
-          <span className="text-[var(--ld-text2)] font-medium">
+          <span className="font-medium text-[var(--ink-2)]">
             Add your own OpenRouter or Gemini key
           </span>{" "}
-          in Settings for unlimited AI — your key stays encrypted and never leaves
-          your account.
+          in Settings for unlimited AI — your key stays encrypted and never
+          leaves your account.
         </p>
       </div>
     </section>

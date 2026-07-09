@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Sparkles, KeyRound, Infinity as InfinityIcon } from "lucide-react"
+import { KeyRound, Infinity as InfinityIcon } from "lucide-react"
 import { toast } from "sonner"
 import { findProvider } from "@/lib/aiModels"
 import type { ModelProvider } from "@/lib/langgraph/types"
@@ -30,9 +30,9 @@ function modelLabel(provider: string, modelName: string): string {
   return modelName.split("/").pop() ?? modelName
 }
 
+// Fine under 80% (evergreen); clay from 80% up — the caption carries the words.
 function meterColor(pct: number): string {
-  if (pct >= 100) return "var(--neg)"
-  if (pct >= 80) return "#f59e0b"
+  if (pct >= 80) return "var(--neg)"
   return "var(--brand)"
 }
 
@@ -77,11 +77,10 @@ export function AiSettingsSection() {
   }
 
   return (
-    <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-[var(--ink-3)]" />
-        <h2 className="font-sora text-sm font-semibold text-[var(--ink)]">AI assistant</h2>
-      </div>
+    <section className="border-t border-[var(--hairline)] pt-6">
+      <h2 className="mb-5 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+        AI assistant
+      </h2>
 
       {loading ? (
         <div className="space-y-3">
@@ -118,7 +117,7 @@ export function AiSettingsSection() {
             </div>
             <button
               onClick={() => setModalOpen(true)}
-              className="cursor-pointer shrink-0 flex items-center gap-1.5 rounded-lg bg-[var(--brand-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand)] hover:text-white transition-colors"
+              className="cursor-pointer shrink-0 inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--hairline-strong)] px-4 text-[13px] font-medium text-[var(--ink)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)]"
             >
               <KeyRound className="h-3.5 w-3.5" /> Add key
             </button>

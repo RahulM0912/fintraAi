@@ -62,7 +62,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={1}
-          className="min-h-[40px] max-h-[160px] resize-none overflow-y-auto rounded-3xl bg-muted/50 px-4 py-2 leading-5 focus-visible:ring-1"
+          className="min-h-[40px] max-h-[160px] resize-none overflow-y-auto rounded-lg border-[var(--hairline-strong)] bg-transparent px-4 py-2 leading-5 focus-visible:ring-2 focus-visible:ring-ring/50"
           disabled={isLoading || disabled}
         />
         <Button
@@ -86,14 +86,14 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         onChange={handleTextareaChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="min-h-[48px] max-h-[160px] resize-none overflow-y-auto rounded-xl bg-muted/50 focus-visible:ring-1"
+        className="min-h-[48px] max-h-[160px] resize-none overflow-y-auto rounded-lg border-[var(--hairline-strong)] bg-transparent focus-visible:ring-2 focus-visible:ring-ring/50"
         disabled={isLoading || disabled}
         rows={1}
       />
       <Button
         onClick={onSend}
         size="icon"
-        className="h-12 w-12 shrink-0 rounded-xl"
+        className="h-12 w-12 shrink-0 rounded-lg"
         disabled={isLoading || disabled || !value.trim()}
         aria-label="Send"
       >

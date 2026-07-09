@@ -13,14 +13,14 @@ export function ActivityLog({ items, size = "md" }: Props) {
 
   const isSm = size === "sm";
   const containerClass = isSm
-    ? "rounded-md border border-border/60 bg-background/40 p-2"
-    : "rounded-lg border border-border/60 bg-background/40 p-3";
+    ? "rounded-md border border-[var(--hairline)] p-2"
+    : "rounded-lg border border-[var(--hairline)] p-3";
   const headerClass = isSm
     ? "mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
     : "mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
   const dotClass = isSm
-    ? "inline-block h-1 w-1 animate-pulse rounded-full bg-[var(--brand)]"
-    : "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand)]";
+    ? "inline-block h-1 w-1 rounded-full bg-[var(--brand)]"
+    : "inline-block h-1.5 w-1.5 rounded-full bg-[var(--brand)]";
   const listClass = isSm ? "flex flex-col gap-1" : "flex flex-col gap-1.5";
   const itemClass = isSm
     ? "flex items-center gap-1.5 text-xs"
@@ -39,7 +39,7 @@ export function ActivityLog({ items, size = "md" }: Props) {
             {item.status === "active" ? (
               <Loader2 className={`${iconClass} animate-spin text-[var(--brand)]`} />
             ) : (
-              <CheckCircle2 className={`${iconClass} text-green-500`} />
+              <CheckCircle2 className={`${iconClass} text-[var(--pos)]`} />
             )}
             <span
               className={
