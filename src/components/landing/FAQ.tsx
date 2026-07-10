@@ -4,20 +4,20 @@ import { useState } from "react";
 
 const faqs = [
   {
-    q: "What counts as an AI message?",
-    a: "Every message you send to Fintra counts as one — whether you're adding a transaction, asking for a summary, or editing something. One message = one, regardless of how much you write in it. Adding or editing transactions manually doesn't count.",
-  },
-  {
-    q: "What happens when I run out of AI messages?",
-    a: "The free plan includes 50 AI messages a month, and the count resets at the start of each month. Everything except the AI chat keeps working. Want unlimited chat right away? Add your own OpenRouter or Gemini key in Settings — your data is never touched.",
-  },
-  {
-    q: "Can I use my own AI key?",
-    a: "Yes. Add an OpenRouter or Gemini API key in Settings and your chat becomes unlimited on your own key. It's encrypted at rest, only used for your requests, and never returned to the browser.",
+    q: "Is Fintra really free?",
+    a: "Yes — everything is free while we're in early access. The free plan includes 50 AI messages a month; transactions, budgets, analytics, and CSV import/export are unlimited. No credit card, no trial clock.",
   },
   {
     q: "Is my financial data safe?",
     a: "Yes. Your data is stored securely and never shared or sold. Fintra only reads data you explicitly give it through the chat, and it doesn't connect to your bank account.",
+  },
+  {
+    q: "What happens when I run out of AI messages?",
+    a: "The count resets at the start of each month, and everything except the AI chat keeps working in the meantime. Want unlimited chat right away? Add your own key — see below.",
+  },
+  {
+    q: "Can I use my own AI key?",
+    a: "Yes. Add an OpenRouter or Gemini API key in Settings and your chat becomes unlimited on your own key. It's encrypted at rest, only used for your requests, and never returned to the browser.",
   },
 ];
 

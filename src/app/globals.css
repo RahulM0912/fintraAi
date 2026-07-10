@@ -165,6 +165,13 @@
   html {
     scroll-behavior: smooth;
   }
+  /* Tailwind v4 preflight leaves buttons on cursor:default — every enabled
+     button/role=button in the app is clickable, so say so globally instead
+     of sprinkling cursor-pointer per element. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {

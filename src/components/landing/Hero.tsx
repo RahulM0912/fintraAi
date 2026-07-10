@@ -145,7 +145,7 @@ export function Hero() {
               Start for free
             </Link>
             <Link
-              href="#features"
+              href="#how"
               className="inline-flex min-h-12 items-center rounded-lg border border-[var(--hairline-strong)] px-6 text-base font-medium text-[var(--ink)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)]"
             >
               See how it works
@@ -153,7 +153,7 @@ export function Hero() {
           </div>
 
           <p className="mt-5 text-[0.8rem] text-[var(--ink-3)]">
-            No credit card needed · Free plan available
+            Free while we&apos;re in early access · No credit card needed
           </p>
         </div>
 

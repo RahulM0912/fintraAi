@@ -21,8 +21,8 @@ export function LandingNavbar() {
         {/* Desktop nav links */}
         <div className="hidden items-center gap-6 md:flex">
           {[
+            { href: "#how", label: "How it works" },
             { href: "#features", label: "Features" },
-            { href: "#pricing", label: "Pricing" },
             { href: "#faq", label: "FAQ" },
           ].map(({ href, label }) => (
             <Link

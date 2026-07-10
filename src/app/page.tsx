@@ -2,8 +2,8 @@ import { LandingNavbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
+import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
 
 function Divider() {
@@ -18,13 +18,13 @@ export default function HomePage() {
       <LandingNavbar />
       <Hero />
       <Divider />
-      <Features />
-      <Divider />
       <HowItWorks />
       <Divider />
-      <Pricing />
+      <Features />
       <Divider />
       <FAQ />
+      <Divider />
+      <CTA />
       <Footer />
     </div>
   );

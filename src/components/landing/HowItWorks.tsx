@@ -14,13 +14,13 @@ const steps = [
   {
     num: "3",
     title: "See where the money goes",
-    desc: "The ledger updates instantly, and the agent tells you what changed.",
+    desc: "The ledger updates instantly, and the agent tells you what changed — and what's left of the budget.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto max-w-[1100px] px-4 py-[70px] md:px-8">
+    <section className="mx-auto max-w-[1100px] px-4 py-[70px] md:px-8" id="how">
       <div className="flex items-center gap-3">
         <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
         <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
@@ -28,7 +28,9 @@ export function HowItWorks() {
         </p>
       </div>
       <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-[2.1rem]">
-        Three steps to a clear month
+        Ten seconds a day.
+        <br />
+        That&apos;s the whole system.
       </h2>
 
       <div className="mt-12 grid grid-cols-1 gap-10 md:grid-cols-3">

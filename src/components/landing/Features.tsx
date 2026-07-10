@@ -1,28 +1,23 @@
 import {
-  MessageSquare,
-  PieChart,
   Tags,
   CalendarDays,
+  Target,
   ShieldCheck,
-  Moon,
   type LucideIcon,
 } from "lucide-react";
 
+/* Only the features the hero mockup doesn't already demonstrate —
+   chat-to-log and instant summaries live in the mockup itself. */
 const features: { icon: LucideIcon; title: string; desc: string }[] = [
-  {
-    icon: MessageSquare,
-    title: "Chat to log",
-    desc: 'Say "I spent ₹350 on auto today" and it\'s logged instantly. No tapping through forms.',
-  },
-  {
-    icon: PieChart,
-    title: "Instant summaries",
-    desc: 'Ask "where did I spend the most?" and get a clear breakdown in seconds.',
-  },
   {
     icon: Tags,
     title: "Category breakdown",
     desc: "Food, travel, utilities, entertainment — auto-categorised as you log.",
+  },
+  {
+    icon: Target,
+    title: "Budgets that answer back",
+    desc: "Set a monthly cap, and every expense you log tells you how much of it is left.",
   },
   {
     icon: CalendarDays,
@@ -33,11 +28,6 @@ const features: { icon: LucideIcon; title: string; desc: string }[] = [
     icon: ShieldCheck,
     title: "Asks before it acts",
     desc: "For large or destructive changes, Fintra checks with you first.",
-  },
-  {
-    icon: Moon,
-    title: "Light & dark",
-    desc: "Warm paper by day, warm charcoal by night — your ledger, either way.",
   },
 ];
 
@@ -59,7 +49,7 @@ export function Features() {
         Fintra keeps it simple — just talk, and it keeps the ledger.
       </p>
 
-      <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2">
         {features.map((feat) => (
           <div key={feat.title} className="border-t border-[var(--hairline)] pt-5">
             <feat.icon className="h-5 w-5 text-[var(--brand)]" aria-hidden />
