@@ -1,17 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, ChevronLeft, ChevronRight, Plus as PlusIcon } from "lucide-react"
+import { Pencil, Trash2, ChevronLeft, ChevronRight, Loader2, Plus as PlusIcon } from "lucide-react"
 import { useQuickAdd } from "@/components/common/QuickAddProvider"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { useTapConfirm } from "@/lib/useTapConfirm"
 import { toast } from "sonner"
 import { TransactionModal } from "@/components/common/TransactionModal"
 import { format } from "date-fns"
@@ -46,43 +40,6 @@ type Props = {
 }
 
 const COLS = "grid-cols-[7rem_1.8fr_1.2fr_8rem_5.5rem]"
-
-function DeleteConfirmDialog({
-  open,
-  onOpenChange,
-  onConfirm,
-  isDeleting,
-  transactionLabel,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onConfirm: () => void
-  isDeleting: boolean
-  transactionLabel: string
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display">Delete transaction</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Delete{" "}
-          <span className="font-medium text-foreground">&quot;{transactionLabel}&quot;</span>?
-          This removes it from your history and can&apos;t be undone.
-        </p>
-        <DialogFooter className="gap-2 pt-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isDeleting}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? "Deleting…" : "Delete"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 function PaginationBar({
   pagination,
@@ -173,23 +130,57 @@ function RowActions({
   onDelete,
 }: {
   onEdit: () => void
-  onDelete: () => void
+  onDelete: () => Promise<void>
 }) {
+  // Delete is tap-to-confirm: first tap arms (button turns clay and says so),
+  // second tap deletes, ~3s of nothing disarms. While the request runs the
+  // button says "Deleting…" — silence after a destructive tap reads as broken.
+  const [deleting, setDeleting] = useState(false)
+  const { armed, trigger, disarm } = useTapConfirm(async () => {
+    setDeleting(true)
+    try {
+      await onDelete()
+    } finally {
+      setDeleting(false)
+    }
+  })
+
+  const busy = armed || deleting
+
   return (
     <div className="flex items-center justify-end gap-0.5">
+      {!busy && (
+        <button
+          onClick={onEdit}
+          aria-label="Edit transaction"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
       <button
-        onClick={onEdit}
-        aria-label="Edit transaction"
-        className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+        onClick={trigger}
+        onBlur={disarm}
+        disabled={deleting}
+        aria-label={
+          deleting
+            ? "Deleting"
+            : armed
+            ? "Tap again to confirm delete"
+            : "Delete transaction"
+        }
+        className={
+          busy
+            ? "flex h-10 items-center gap-1.5 rounded-lg bg-[var(--neg)] px-2.5 text-xs font-medium text-white transition-colors duration-150 disabled:opacity-80"
+            : "flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--neg-bg)] hover:text-[var(--neg)]"
+        }
       >
-        <Pencil className="h-4 w-4" />
-      </button>
-      <button
-        onClick={onDelete}
-        aria-label="Delete transaction"
-        className="cursor-pointer flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-3)] transition-colors duration-150 hover:bg-[var(--neg-bg)] hover:text-[var(--neg)]"
-      >
-        <Trash2 className="h-4 w-4" />
+        {deleting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Trash2 className={busy ? "h-3.5 w-3.5" : "h-4 w-4"} />
+        )}
+        {deleting ? "Deleting…" : armed ? "Confirm" : null}
       </button>
     </div>
   )
@@ -198,22 +189,17 @@ function RowActions({
 export function TransactionTable({ transactions, pagination, isLoading, onPageChange, onRefresh }: Props) {
   const { openAdd } = useQuickAdd()
   const [editTx, setEditTx] = useState<Transaction | null>(null)
-  const [deleteTx, setDeleteTx] = useState<Transaction | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
 
-  async function handleDeleteConfirm() {
-    if (!deleteTx) return
-    setIsDeleting(true)
+  // Confirmation happens inline on the row button (tap-to-confirm),
+  // so by the time this runs the user has already tapped twice.
+  async function handleDelete(tx: Transaction) {
     try {
-      const res = await fetch(`/api/transactions/${deleteTx.id}`, { method: "DELETE" })
+      const res = await fetch(`/api/transactions/${tx.id}`, { method: "DELETE" })
       if (!res.ok && res.status !== 204) throw new Error("Delete failed")
       toast.success("Transaction deleted")
-      setDeleteTx(null)
       onRefresh()
     } catch {
       toast.error("Failed to delete transaction")
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -300,7 +286,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                     {amount}
                     <RowActions
                       onEdit={() => setEditTx(tx)}
-                      onDelete={() => setDeleteTx(tx)}
+                      onDelete={() => handleDelete(tx)}
                     />
                   </div>
                 </div>
@@ -322,7 +308,7 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
                   <div className="text-right">{amount}</div>
                   <RowActions
                     onEdit={() => setEditTx(tx)}
-                    onDelete={() => setDeleteTx(tx)}
+                    onDelete={() => handleDelete(tx)}
                   />
                 </div>
               </div>
@@ -343,13 +329,6 @@ export function TransactionTable({ transactions, pagination, isLoading, onPageCh
         onSuccess={() => { setEditTx(null); onRefresh() }}
       />
 
-      <DeleteConfirmDialog
-        open={!!deleteTx}
-        onOpenChange={(open) => !open && setDeleteTx(null)}
-        onConfirm={handleDeleteConfirm}
-        isDeleting={isDeleting}
-        transactionLabel={deleteTx?.description || deleteTx?.category.name || "this transaction"}
-      />
     </>
   )
 }

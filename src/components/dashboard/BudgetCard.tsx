@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Plus } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { BudgetModal, type EditingBudget } from "@/components/dashboard/BudgetModal"
 import { useDashboardStore } from "@/store/dashboardStore"
 
@@ -45,7 +46,7 @@ export function BudgetCard() {
       {loading ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+            <Skeleton key={i} className="h-12 rounded-lg" />
           ))}
         </div>
       ) : !hasAny ? (

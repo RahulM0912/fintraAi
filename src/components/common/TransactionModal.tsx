@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { useTransactionStore } from "@/store/transactionStore"
 import { getLastCategory, postAddToast, rememberLastCategory } from "@/lib/quickAdd"
-import { CalendarIcon, ChevronDown, IndianRupee, Search, Tag } from "lucide-react"
+import { PickerList } from "@/components/ui/picker-list"
+import { CalendarIcon, ChevronDown, IndianRupee, Tag } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -65,8 +66,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [catSearch, setCatSearch] = useState("")
-  const catSearchRef = useRef<HTMLInputElement>(null)
   const amountRef = useRef<HTMLInputElement>(null)
 
   // Seed fields when opening in edit mode
@@ -111,14 +110,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isIncome])
 
-  // Auto-focus category search input
-  useEffect(() => {
-    if (categoryOpen) {
-      setCatSearch("")
-      setTimeout(() => catSearchRef.current?.focus(), 50)
-    }
-  }, [categoryOpen])
-
   // Reset all fields on close
   useEffect(() => {
     if (!open) {
@@ -128,16 +119,11 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
       setSelectedDate(new Date())
       setCategoryOpen(false)
       setCalendarOpen(false)
-      setCatSearch("")
       setIsSaving(false)
     }
   }, [open])
 
   const selectedCategory = categories.find((c) => String(c.id) === String(categoryId))
-
-  const filteredCategories = catSearch.trim()
-    ? categories.filter((c) => c.name.toLowerCase().startsWith(catSearch.toLowerCase()))
-    : categories
 
   function validate() {
     if (!amount || Number(amount) <= 0) {
@@ -370,32 +356,17 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    ref={catSearchRef}
-                    value={catSearch}
-                    onChange={(e) => setCatSearch(e.target.value)}
-                    placeholder="Search categories…"
-                    className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-                <div className="max-h-52 overflow-y-scroll" onWheel={(e) => e.stopPropagation()}>
-                  {filteredCategories.length === 0 && (
-                    <p className="text-sm text-muted-foreground px-3 py-2">No results</p>
-                  )}
-                  {filteredCategories.map((c) => (
-                    <button
-                      key={String(c.id)}
-                      onClick={() => { setCategoryId(String(c.id)); setCategoryOpen(false) }}
-                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
-                        categoryId === String(c.id) ? "bg-muted font-medium" : ""
-                      }`}
-                    >
-                      <span>{c.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <PickerList
+                  searchable
+                  searchPlaceholder="Search categories…"
+                  maxHeightClass="max-h-52"
+                  options={categories.map((c) => ({ key: String(c.id), label: c.name }))}
+                  value={categoryId}
+                  onSelect={(key) => {
+                    setCategoryId(key)
+                    setCategoryOpen(false)
+                  }}
+                />
               </PopoverContent>
             </Popover>
             <p className="text-xs text-muted-foreground hidden sm:block">Choose a category for this transaction</p>
@@ -413,12 +384,12 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           </Button>
           {!isEditMode && (
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => handleCreate(true)}
               disabled={isLoading}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none text-[var(--brand)] hover:text-[var(--brand-hover)]"
             >
-              Add another
+              Save & add another
             </Button>
           )}
           <Button

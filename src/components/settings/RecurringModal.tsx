@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PickerList } from "@/components/ui/picker-list"
 import { useTransactionStore } from "@/store/transactionStore"
 import { ChevronDown, IndianRupee, Tag } from "lucide-react"
 import { toast } from "sonner"
@@ -176,19 +177,17 @@ export function RecurringModal({ open, onOpenChange, onSaved, editing }: Props) 
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
-                <div className="max-h-52 overflow-y-auto">
-                  {categories.map((c) => (
-                    <button
-                      key={String(c.id)}
-                      onClick={() => { setCategoryId(String(c.id)); setCategoryOpen(false) }}
-                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
-                        categoryId === String(c.id) ? "bg-muted font-medium" : ""
-                      }`}
-                    >
-                      <span>{c.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <PickerList
+                  searchable
+                  searchPlaceholder="Search categories…"
+                  maxHeightClass="max-h-52"
+                  options={categories.map((c) => ({ key: String(c.id), label: c.name }))}
+                  value={categoryId}
+                  onSelect={(key) => {
+                    setCategoryId(key)
+                    setCategoryOpen(false)
+                  }}
+                />
               </PopoverContent>
             </Popover>
           </div>
