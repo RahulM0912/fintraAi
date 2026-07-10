@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { X, MessageSquare, Sparkles } from "lucide-react";
+import { X, MessageSquare } from "lucide-react";
 import { useChat } from "@/lib/chat/useChat";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
@@ -10,6 +11,7 @@ import { ChatInput, type ChatInputHandle } from "@/components/chat/ChatInput";
 import { ASSISTANT_SUGGESTIONS, ASSISTANT_WELCOME } from "@/components/chat/suggestions";
 
 export function AiAssistant() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const chat = useChat({ welcomeMessage: ASSISTANT_WELCOME });
@@ -52,15 +54,18 @@ export function AiAssistant() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The chat page IS the assistant — a floating second chat there is noise.
+  if (pathname.startsWith("/chat")) return null;
+
   return (
     <>
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Open AI assistant"
-          className="cursor-pointer fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white shadow-lg shadow-[var(--brand)]/30 transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-[var(--brand)]/30"
+          className="cursor-pointer fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)] shadow-sm transition-colors duration-150 ease-out hover:bg-[var(--brand-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
         >
-          <MessageSquare className="h-6 w-6" />
+          <MessageSquare className="h-6 w-6" aria-hidden />
         </button>
       )}
 
@@ -71,15 +76,13 @@ export function AiAssistant() {
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
-          <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l bg-background shadow-2xl sm:w-[400px]">
-            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)]">
-                  <Sparkles className="h-4 w-4 text-white" />
-                </div>
+          <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-[var(--hairline)] bg-[var(--app-bg)] shadow-lg sm:w-[400px]">
+            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-4 py-4">
+              <div className="flex items-center gap-3">
+                <span aria-hidden className="h-px w-5 bg-[var(--brand)]" />
                 <div>
-                  <h2 className="text-sm font-semibold">Fintra AI</h2>
-                  <p className="text-xs text-muted-foreground">Your finance copilot</p>
+                  <h2 className="font-display text-base font-semibold text-[var(--ink)]">Fintra</h2>
+                  <p className="text-xs text-[var(--ink-3)]">Ask about your money</p>
                 </div>
               </div>
               <Button

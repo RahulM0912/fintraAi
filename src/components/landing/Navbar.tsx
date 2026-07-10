@@ -2,34 +2,33 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/navbar/ThemeToggle";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function LandingNavbar() {
-  return (
-    <nav className="sticky top-0 z-50 bg-[var(--ld-bg)] border-b border-[var(--ld-border)] transition-colors duration-300">
-      <div className="flex items-center justify-between h-[60px] max-w-[1100px] mx-auto px-4 md:px-8">
+  const { user } = useAuth();
 
-        {/* Logo */}
+  return (
+    <nav className="sticky top-0 z-50 border-b border-[var(--hairline)] bg-[var(--app-bg)]/90 backdrop-blur-md transition-colors duration-300">
+      <div className="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-4 md:px-8">
+        {/* Wordmark */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-sora font-bold text-[1.3rem] text-[var(--ld-purple)]"
+          className="font-display text-[22px] font-semibold tracking-tight text-[var(--ink)]"
         >
-          <span className="w-8 h-8 rounded-lg bg-[var(--ld-purple)] flex items-center justify-center text-white text-base font-bold flex-shrink-0">
-            ✦
-          </span>
           Fintra
         </Link>
 
         {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden items-center gap-6 md:flex">
           {[
+            { href: "#how", label: "How it works" },
             { href: "#features", label: "Features" },
-            { href: "#pricing", label: "Pricing" },
             { href: "#faq", label: "FAQ" },
           ].map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className="text-sm text-[var(--ld-text2)] hover:text-[var(--ld-text)] transition-colors duration-200"
+              className="text-sm text-[var(--ink-2)] transition-colors duration-150 hover:text-[var(--ink)]"
             >
               {label}
             </Link>
@@ -39,18 +38,29 @@ export function LandingNavbar() {
         {/* Right actions */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link
-            href="/sign-in"
-            className="hidden sm:inline-flex items-center px-4 py-[7px] rounded-lg text-sm font-medium border border-[var(--ld-border2)] text-[var(--ld-text)] hover:border-[var(--ld-purple)] hover:text-[var(--ld-purple)] transition-all duration-200"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 px-[18px] py-[7px] rounded-lg text-sm font-semibold text-white bg-[var(--ld-purple)] hover:bg-[var(--ld-purple2)] hover:-translate-y-px transition-all duration-200"
-          >
-            Get started free →
-          </Link>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition-colors duration-150 ease-out hover:bg-[var(--brand-hover)]"
+            >
+              Go to dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hidden min-h-11 items-center rounded-lg border border-[var(--hairline-strong)] px-4 text-sm font-medium text-[var(--ink)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)] sm:inline-flex"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition-colors duration-150 ease-out hover:bg-[var(--brand-hover)]"
+              >
+                Get started free
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

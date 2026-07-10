@@ -121,6 +121,7 @@ export async function GET(req: Request) {
   const limit = Number(searchParams.get("limit") ?? 10);
   const type = searchParams.get("type");
   const categoryId = searchParams.get("categoryId");
+  const search = searchParams.get("search");
   const offset = (page - 1) * limit;
 
   const db = createAdminClient();
@@ -135,6 +136,11 @@ export async function GET(req: Request) {
   if (startDate && endDate) query = query.gte("date", startDate).lte("date", endDate);
   if (type) query = query.eq("type", type);
   if (categoryId) query = query.eq("category_id", categoryId);
+  if (search) {
+    // Escape LIKE wildcards so user input is matched literally
+    const escaped = search.replace(/[%_]/g, (m) => `\\${m}`);
+    query = query.ilike("description", `%${escaped}%`);
+  }
 
   const { data, count, error } = await query;
   if (error) {

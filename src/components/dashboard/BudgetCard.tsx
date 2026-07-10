@@ -1,61 +1,22 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { Plus, Target } from "lucide-react"
+import { useState } from "react"
+import { Plus } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { BudgetModal, type EditingBudget } from "@/components/dashboard/BudgetModal"
-
-type BudgetItem = {
-  id: string
-  categoryId: string
-  categoryName: string
-  categoryIcon: string
-  amount: number
-  spent: number
-  percentage: number
-}
-
-type BudgetData = {
-  month: string
-  overall: { id: string; amount: number; spent: number; percentage: number } | null
-  items: BudgetItem[]
-  totalExpense: number
-}
+import { useDashboardStore } from "@/store/dashboardStore"
 
 function inr(n: number) {
   return `₹${n.toLocaleString("en-IN")}`
 }
 
-// Healthy under 80%, warning 80–99%, over at 100%+.
-function barColor(pct: number) {
-  if (pct >= 100) return "var(--neg)"
-  if (pct >= 80) return "#f59e0b"
-  return "var(--pos)"
-}
-
 export function BudgetCard() {
-  const [data, setData] = useState<BudgetData | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Budgets come from the page-level /api/dashboard fetch; saving a budget
+  // triggers a background store refresh.
+  const { budgets: data, hydrated, fetchDashboard } = useDashboardStore()
+  const loading = !hydrated
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<EditingBudget | null>(null)
-
-  const fetchBudgets = useCallback(async () => {
-    try {
-      const res = await fetch("/api/budgets")
-      if (!res.ok) throw new Error()
-      setData(await res.json())
-    } catch {
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchBudgets()
-    const handler = () => fetchBudgets()
-    window.addEventListener("transaction-added", handler)
-    return () => window.removeEventListener("transaction-added", handler)
-  }, [fetchBudgets])
 
   const openNew = () => {
     setEditing(null)
@@ -69,49 +30,46 @@ export function BudgetCard() {
   const hasAny = !!data && (data.overall || data.items.length > 0)
 
   return (
-    <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-6 shadow-[0_2px_10px_rgb(0,0,0,0.04)] dark:shadow-none">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-[var(--ink-3)]" />
-          <h2 className="font-sora text-base font-semibold text-[var(--ink)]">Budgets</h2>
-        </div>
+    <section id="budgets" aria-label="Budgets" className="scroll-mt-24 border-t border-[var(--hairline)] pt-6">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+          Budgets
+        </h2>
         <button
           onClick={openNew}
-          className="cursor-pointer flex items-center gap-1.5 rounded-lg bg-[var(--brand-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand)] hover:text-white transition-colors"
+          className="cursor-pointer inline-flex min-h-11 items-center gap-1.5 text-[13px] font-medium text-[var(--brand)] transition-colors duration-150 hover:text-[var(--brand-hover)]"
         >
-          <Plus className="h-3.5 w-3.5" /> Add budget
+          <Plus className="h-3.5 w-3.5" aria-hidden /> Add budget
         </button>
       </div>
 
       {loading ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
-            <div key={i} className="h-12 rounded-xl bg-[var(--surface-2)] animate-pulse" />
+            <Skeleton key={i} className="h-12 rounded-lg" />
           ))}
         </div>
       ) : !hasAny ? (
-        <div className="py-8 text-center">
-          <p className="text-sm text-[var(--ink-2)]">No budgets yet.</p>
-          <p className="text-xs text-[var(--ink-3)] mt-1">
-            Set a monthly cap to see how much you can still spend.
+        <div className="py-6">
+          <p className="text-sm text-[var(--ink-2)]">
+            No caps set. Give a category a monthly limit and Fintra will warn
+            you in the briefing before you cross it.
           </p>
           <button
             onClick={openNew}
-            className="cursor-pointer mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-hover)] transition-colors"
+            className="cursor-pointer mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--hairline-strong)] px-4 text-sm font-medium text-[var(--ink)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)]"
           >
-            <Plus className="h-4 w-4" /> Set your first budget
+            <Plus className="h-4 w-4" aria-hidden /> Set your first budget
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <ul className="space-y-1">
           {data!.overall && (
             <BudgetRow
-              label="Overall"
-              icon="💰"
+              label="All spending"
               spent={data!.overall.spent}
               amount={data!.overall.amount}
               percentage={data!.overall.percentage}
-              highlight
               onClick={() =>
                 openEdit({ id: data!.overall!.id, categoryId: null, amount: data!.overall!.amount })
               }
@@ -121,75 +79,72 @@ export function BudgetCard() {
             <BudgetRow
               key={b.id}
               label={b.categoryName}
-              icon={b.categoryIcon}
               spent={b.spent}
               amount={b.amount}
               percentage={b.percentage}
               onClick={() => openEdit({ id: b.id, categoryId: b.categoryId, amount: b.amount })}
             />
           ))}
-        </div>
+        </ul>
       )}
 
       <BudgetModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         editing={editing}
-        onSaved={fetchBudgets}
+        onSaved={fetchDashboard}
       />
     </section>
   )
 }
 
+/* Fine under 80% (evergreen); at 80%+ the bar turns clay and the caption
+   says so in words — color is never the only signal. */
 function BudgetRow({
   label,
-  icon,
   spent,
   amount,
   percentage,
-  highlight,
   onClick,
 }: {
   label: string
-  icon: string
   spent: number
   amount: number
   percentage: number
-  highlight?: boolean
   onClick: () => void
 }) {
   const over = percentage >= 100
+  const close = percentage >= 80 && !over
+  const barColor = percentage >= 80 ? "var(--neg)" : "var(--pos)"
   return (
-    <button
-      onClick={onClick}
-      className={`cursor-pointer w-full text-left rounded-xl p-3 transition-colors hover:bg-[var(--surface-2)] ${
-        highlight ? "bg-[var(--brand-bg)]" : ""
-      }`}
-    >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
-          <span className="text-base leading-none">{icon}</span>
-          {label}
-        </span>
-        <span className="text-xs tabular-nums text-[var(--ink-2)]">
-          <span className={over ? "font-semibold text-[var(--neg)]" : "font-semibold text-[var(--ink)]"}>
-            {inr(spent)}
-          </span>{" "}
-          / {inr(amount)}
-        </span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor(percentage) }}
-        />
-      </div>
-      <div className="mt-1 flex justify-between text-[11px] text-[var(--ink-3)]">
-        <span>{percentage}% used</span>
-        <span>
-          {over ? `${inr(spent - amount)} over` : `${inr(amount - spent)} left`}
-        </span>
-      </div>
-    </button>
+    <li>
+      <button
+        onClick={onClick}
+        className="cursor-pointer w-full rounded-lg px-2 py-3 text-left transition-colors duration-150 ease-out hover:bg-[var(--surface-2)] -mx-2"
+      >
+        <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[13px]">
+          <span className="truncate font-medium text-[var(--ink)]">{label}</span>
+          <span className="tnum shrink-0 text-[var(--ink-2)]">
+            <span className={over ? "font-semibold text-[var(--neg)]" : "font-semibold text-[var(--ink)]"}>
+              {inr(spent)}
+            </span>{" "}
+            / {inr(amount)}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div
+            className="h-full rounded-full transition-[width] duration-200 ease-out"
+            style={{ width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor }}
+          />
+        </div>
+        <p className="tnum mt-1.5 text-xs text-[var(--ink-3)]">
+          {over
+            ? `over by ${inr(spent - amount)}`
+            : close
+            ? `close to the cap — ${inr(amount - spent)} left`
+            : `${percentage}% used · ${inr(amount - spent)} left`}
+        </p>
+      </button>
+    </li>
   )
 }

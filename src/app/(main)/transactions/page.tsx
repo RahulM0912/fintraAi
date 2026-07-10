@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { TransactionFilters } from "@/components/transaction/TransactionFilters"
 import { TransactionTable } from "@/components/transaction/TransactionTable"
-import { TransactionModal } from "@/components/common/TransactionModal"
+import { useQuickAdd } from "@/components/common/QuickAddProvider"
 import type { DateRange } from "react-day-picker"
 import { startOfMonth, endOfMonth, format } from "date-fns"
 
@@ -29,6 +28,7 @@ type Pagination = {
 const PAGE_SIZE = 7
 
 export default function TransactionsPage() {
+  const { openAdd } = useQuickAdd()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -36,15 +36,12 @@ export default function TransactionsPage() {
   // Filters
   const [type, setType] = useState("")
   const [categoryId, setCategoryId] = useState("")
+  const [search, setSearch] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   })
   const [page, setPage] = useState(1)
-
-  // Add transaction modal
-  const [addModalOpen, setAddModalOpen] = useState(false)
-  const [addModalType, setAddModalType] = useState<"income" | "expense">("expense")
 
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true)
@@ -54,12 +51,19 @@ export default function TransactionsPage() {
       params.set("limit", String(PAGE_SIZE))
       if (type) params.set("type", type)
       if (categoryId) params.set("categoryId", categoryId)
+      if (search) params.set("search", search)
       if (dateRange?.from) params.set("startDate", format(dateRange.from, "yyyy-MM-dd"))
       if (dateRange?.to) params.set("endDate", format(dateRange.to, "yyyy-MM-dd"))
 
       const res = await fetch(`/api/transactions?${params.toString()}`)
       if (!res.ok) throw new Error("Failed to fetch")
       const data = await res.json()
+      // If a delete/filter emptied the current page but earlier pages still have
+      // rows, step back instead of stranding the user on a blank page.
+      if ((data.data?.length ?? 0) === 0 && (data.pagination?.total ?? 0) > 0 && page > 1) {
+        setPage((p) => Math.max(1, p - 1))
+        return
+      }
       setTransactions(data.data)
       setPagination(data.pagination)
     } catch {
@@ -68,7 +72,7 @@ export default function TransactionsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, type, categoryId, dateRange])
+  }, [page, type, categoryId, search, dateRange])
 
   useEffect(() => {
     fetchTransactions()
@@ -94,55 +98,59 @@ export default function TransactionsPage() {
     setDateRange(r)
     setPage(1)
   }
+  function handleSearchChange(s: string) {
+    setSearch(s)
+    setPage(1)
+  }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6 max-w-6xl mx-auto">
-      {/* Filter bar + Add button */}
-      <div className="flex flex-col gap-3">
-        {/* Mobile: button on top, full width */}
-        <Button
-          onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
-          className="sm:hidden w-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm transition-colors duration-200"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Transaction
-        </Button>
-
-        {/* Filters row — button sits inline on sm+ */}
-        <div className="flex items-center justify-between gap-3">
-          <TransactionFilters
-            type={type}
-            categoryId={categoryId}
-            dateRange={dateRange}
-            onTypeChange={handleTypeChange}
-            onCategoryChange={handleCategoryChange}
-            onDateRangeChange={handleDateRangeChange}
-          />
-
-          <Button
-            onClick={() => { setAddModalType("expense"); setAddModalOpen(true) }}
-            className="hidden sm:flex bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-lg px-5 shadow-sm transition-colors duration-200 shrink-0"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add Transaction
-          </Button>
+    <div className="mx-auto max-w-5xl px-5 pt-6 pb-10 sm:px-8 lg:pt-12 lg:pb-16">
+      {/* Page title — mobile gets it from the app header; add via bottom-nav "+" */}
+      <div className="hidden lg:flex items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+              The ledger
+            </p>
+          </div>
+          <h1 className="font-display mt-3 text-[32px] font-semibold tracking-tight text-[var(--ink)]">
+            Transactions
+          </h1>
         </div>
+        <button
+          onClick={() => openAdd("expense")}
+          className="cursor-pointer inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-[var(--hairline-strong)] px-4 text-sm font-medium text-[var(--ink-2)] transition-colors duration-150 ease-out hover:border-[var(--ink-3)] hover:text-[var(--ink)]"
+        >
+          <Plus className="h-4 w-4" aria-hidden /> Add transaction
+        </button>
       </div>
 
-      {/* Transaction table */}
-      <TransactionTable
-        transactions={transactions}
-        pagination={pagination}
-        isLoading={isLoading}
-        onPageChange={(p) => setPage(p)}
-        onRefresh={fetchTransactions}
-      />
+      {/* Filter bar */}
+      <div className="mt-0 lg:mt-8">
+        <TransactionFilters
+          type={type}
+          categoryId={categoryId}
+          dateRange={dateRange}
+          search={search}
+          onTypeChange={handleTypeChange}
+          onCategoryChange={handleCategoryChange}
+          onDateRangeChange={handleDateRangeChange}
+          onSearchChange={handleSearchChange}
+        />
+      </div>
 
-      {/* Add Transaction Modal */}
-      <TransactionModal
-        open={addModalOpen}
-        onOpenChange={setAddModalOpen}
-        type={addModalType}
-        onSuccess={() => { setAddModalOpen(false); fetchTransactions() }}
-      />
+      {/* Transaction table — global quick-add modal fires "transaction-added",
+          which the effect above listens to, so creates refresh this list */}
+      <div className="mt-6">
+        <TransactionTable
+          transactions={transactions}
+          pagination={pagination}
+          isLoading={isLoading}
+          onPageChange={(p) => setPage(p)}
+          onRefresh={fetchTransactions}
+        />
+      </div>
     </div>
   )
 }

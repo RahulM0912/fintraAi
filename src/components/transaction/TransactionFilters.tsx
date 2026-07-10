@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react"
+import { useEffect, useState } from "react"
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PickerList } from "@/components/ui/picker-list"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { cn } from "@/lib/utils"
@@ -14,9 +15,11 @@ type Props = {
   type: string
   categoryId: string
   dateRange: DateRange | undefined
+  search: string
   onTypeChange: (type: string) => void
   onCategoryChange: (categoryId: string) => void
   onDateRangeChange: (range: DateRange | undefined) => void
+  onSearchChange: (search: string) => void
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -198,15 +201,24 @@ function buildDateLabel(range: DateRange | undefined) {
 
 /* ── Main filter bar ─────────────────────────────────────────────── */
 export function TransactionFilters({
-  type, categoryId, dateRange,
-  onTypeChange, onCategoryChange, onDateRangeChange,
+  type, categoryId, dateRange, search,
+  onTypeChange, onCategoryChange, onDateRangeChange, onSearchChange,
 }: Props) {
   const [categories, setCategories]     = useState<Category[]>([])
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [typeOpen, setTypeOpen]         = useState(false)
-  const [catSearch, setCatSearch]       = useState("")
-  const searchRef = useRef<HTMLInputElement>(null)
+
+  // Local echo of the search text so typing feels instant; the parent (and the
+  // network request behind it) only hears about it after a debounce.
+  const [searchText, setSearchText] = useState(search)
+  useEffect(() => { setSearchText(search) }, [search])
+  useEffect(() => {
+    if (searchText === search) return
+    const t = setTimeout(() => onSearchChange(searchText), 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText])
 
   useEffect(() => {
     async function fetchAll() {
@@ -228,105 +240,94 @@ export function TransactionFilters({
     fetchAll()
   }, [])
 
-  useEffect(() => {
-    if (categoryOpen) {
-      setCatSearch("")
-      setTimeout(() => searchRef.current?.focus(), 50)
-    }
-  }, [categoryOpen])
-
-  const filteredCategories = catSearch.trim()
-    ? categories.filter((c) => c.name.toLowerCase().startsWith(catSearch.toLowerCase()))
-    : categories
-
   const selectedCategory = categories.find((c) => c.id === categoryId)
-  const categoryLabel    = selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : "All Categories"
-  const typeLabel        = type === "income" ? "Income" : type === "expense" ? "Expense" : "Transaction Type"
+  const categoryLabel    = selectedCategory ? selectedCategory.name : "All categories"
+  const typeLabel        = type === "income" ? "Income" : type === "expense" ? "Expense" : "All types"
   const dateLabel        = buildDateLabel(dateRange)
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
 
+      {/* Description search */}
+      <div className="relative flex-1 min-w-[160px] sm:flex-none sm:w-56">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <input
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="Search description…"
+          aria-label="Search transactions by description"
+          className="h-11 w-full rounded-lg border border-input bg-transparent pl-9 pr-8 text-sm outline-none transition-colors duration-150 focus:ring-2 focus:ring-ring/50"
+        />
+        {searchText && (
+          <button
+            onClick={() => { setSearchText(""); onSearchChange("") }}
+            aria-label="Clear search"
+            className="cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* Category Filter */}
       <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             <SlidersHorizontal className="h-3.5 w-3.5" />
             {categoryLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              ref={searchRef}
-              value={catSearch}
-              onChange={(e) => setCatSearch(e.target.value)}
-              placeholder="Search categories…"
-              className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-          <div className="max-h-60 overflow-y-scroll" onWheel={(e) => e.stopPropagation()}>
-            {!catSearch && (
-              <button
-                onClick={() => { onCategoryChange(""); setCategoryOpen(false) }}
-                className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${!categoryId ? "bg-muted font-medium" : ""}`}
-              >
-                All Categories
-              </button>
-            )}
-            {filteredCategories.length === 0 && (
-              <p className="text-sm text-muted-foreground px-3 py-2">No results</p>
-            )}
-            {["income", "expense"].map((grp) => {
-              const group = filteredCategories.filter((c) => c.type === grp)
-              if (group.length === 0) return null
-              return (
-                <div key={grp}>
-                  <div className="text-xs text-muted-foreground px-3 pt-2 pb-1 font-semibold uppercase tracking-wider">{grp}</div>
-                  {group.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => { onCategoryChange(cat.id); setCategoryOpen(false) }}
-                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2 ${categoryId === cat.id ? "bg-muted font-medium" : ""}`}
-                    >
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )
-            })}
-          </div>
+          <PickerList
+            searchable
+            searchPlaceholder="Search categories…"
+            maxHeightClass="max-h-60"
+            options={[
+              { key: "", label: "All categories" },
+              ...(["income", "expense"] as const).flatMap((grp) =>
+                categories
+                  .filter((c) => c.type === grp)
+                  .map((c) => ({ key: c.id, label: c.name, group: grp }))
+              ),
+            ]}
+            value={categoryId}
+            onSelect={(key) => {
+              onCategoryChange(key)
+              setCategoryOpen(false)
+            }}
+          />
         </PopoverContent>
       </Popover>
 
       {/* Type Filter */}
       <Popover open={typeOpen} onOpenChange={setTypeOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             {typeLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-44 p-1.5" align="start">
-          {(["", "income", "expense"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => { onTypeChange(t); setTypeOpen(false) }}
-              className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors ${type === t ? "bg-muted font-medium" : ""}`}
-            >
-              {t === "" ? "All Types" : t === "income" ? "Income" : "Expense"}
-            </button>
-          ))}
+          <PickerList
+            options={[
+              { key: "", label: "All types" },
+              { key: "income", label: "Income" },
+              { key: "expense", label: "Expense" },
+            ]}
+            value={type}
+            onSelect={(key) => {
+              onTypeChange(key)
+              setTypeOpen(false)
+            }}
+          />
         </PopoverContent>
       </Popover>
 
       {/* Month-range picker — unified for all screen sizes */}
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-1.5 text-sm h-9 font-normal">
+          <Button variant="outline" className="gap-1.5 text-sm h-11 rounded-lg font-normal">
             <CalendarIcon className="h-3.5 w-3.5" />
             {dateLabel}
             <ChevronDown className="h-3 w-3 opacity-50" />

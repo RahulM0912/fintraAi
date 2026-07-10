@@ -1,103 +1,25 @@
 import { getAuthUser } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getBudgetsData } from "@/lib/server/dashboardData";
 export const dynamic = "force-dynamic";
 
 function unauthorized() {
   return new Response("Unauthorized", { status: 401 });
 }
 
-// First and last day (YYYY-MM-DD) of the current month, server-local.
-function currentMonthRange() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const start = `${y}-${pad(m + 1)}-01`;
-  const lastDay = new Date(y, m + 1, 0).getDate();
-  const end = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
-  return { start, end, label: `${y}-${pad(m + 1)}` };
-}
-
 // GET — list budgets for the current month with spent + percentage computed.
+// Logic lives in lib/server/dashboardData so /api/dashboard can compose it.
 export async function GET() {
   const user = await getAuthUser();
   if (!user) return unauthorized();
-  const userId = user.id;
 
-  const db = createAdminClient();
-  const { start, end, label } = currentMonthRange();
-
-  const [{ data: budgets, error: bErr }, { data: txns, error: tErr }] =
-    await Promise.all([
-      db
-        .from("budgets")
-        .select("id, category_id, amount, categories(id, name, icon)")
-        .eq("user_id", userId),
-      db
-        .from("transactions")
-        .select("amount, category_id")
-        .eq("user_id", userId)
-        .eq("type", "expense")
-        .gte("date", start)
-        .lte("date", end),
-    ]);
-
-  if (bErr || tErr) {
-    console.error("[GET /api/budgets]", bErr ?? tErr);
+  try {
+    const data = await getBudgetsData(createAdminClient(), user.id);
+    return Response.json(data);
+  } catch (error) {
+    console.error("[GET /api/budgets]", error);
     return new Response("Internal Server Error", { status: 500 });
   }
-
-  const rows = txns ?? [];
-  const spentByCategory = new Map<string, number>();
-  let totalExpense = 0;
-  for (const t of rows) {
-    const amt = Number(t.amount);
-    totalExpense += amt;
-    if (t.category_id)
-      spentByCategory.set(t.category_id, (spentByCategory.get(t.category_id) ?? 0) + amt);
-  }
-
-  const pct = (spent: number, amount: number) =>
-    amount > 0 ? Math.round((spent / amount) * 100) : 0;
-
-  let overall: {
-    id: string;
-    amount: number;
-    spent: number;
-    percentage: number;
-  } | null = null;
-  const items: {
-    id: string;
-    categoryId: string;
-    categoryName: string;
-    categoryIcon: string;
-    amount: number;
-    spent: number;
-    percentage: number;
-  }[] = [];
-
-  for (const b of budgets ?? []) {
-    const amount = Number(b.amount);
-    if (!b.category_id) {
-      overall = { id: b.id, amount, spent: totalExpense, percentage: pct(totalExpense, amount) };
-      continue;
-    }
-    const cat = Array.isArray(b.categories) ? b.categories[0] : b.categories;
-    const spent = spentByCategory.get(b.category_id) ?? 0;
-    items.push({
-      id: b.id,
-      categoryId: b.category_id,
-      categoryName: (cat as any)?.name ?? "Unknown",
-      categoryIcon: (cat as any)?.icon ?? "",
-      amount,
-      spent,
-      percentage: pct(spent, amount),
-    });
-  }
-
-  items.sort((a, b) => b.percentage - a.percentage);
-
-  return Response.json({ month: label, overall, items, totalExpense });
 }
 
 // POST — create or update a budget. Body: { categoryId: string|null, amount: number }

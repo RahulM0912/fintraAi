@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PickerList } from "@/components/ui/picker-list"
 import { useTransactionStore } from "@/store/transactionStore"
-import { ChevronDown, IndianRupee, Tag, Trash2 } from "lucide-react"
+import { useTapConfirm } from "@/lib/useTapConfirm"
+import { ChevronDown, IndianRupee, Loader2, Tag, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 export type EditingBudget = {
@@ -39,6 +41,11 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
   const [amount, setAmount] = useState<number | "">("")
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Removing gets its own flag — reusing `saving` made the primary button
+  // read "Saving..." while a budget was being deleted.
+  const [removing, setRemoving] = useState(false)
+  const removeConfirm = useTapConfirm(remove)
+  const busy = saving || removing
 
   useEffect(() => {
     if (!open) return
@@ -53,7 +60,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
     categoryValue === OVERALL
       ? "Overall — all spending"
       : selectedCat
-      ? `${selectedCat.icon}  ${selectedCat.name}`
+      ? selectedCat.name
       : "Select a category"
 
   async function save() {
@@ -85,7 +92,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
 
   async function remove() {
     if (!editing?.id) return
-    setSaving(true)
+    setRemoving(true)
     try {
       const res = await fetch(`/api/budgets?id=${editing.id}`, { method: "DELETE" })
       if (!res.ok) throw new Error(await res.text())
@@ -96,13 +103,13 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
     } catch (err: any) {
       toast.error(err?.message || "Failed to remove budget")
     } finally {
-      setSaving(false)
+      setRemoving(false)
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-2xl bg-[var(--surface)]">
+      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-md rounded-xl bg-[var(--surface)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {isEdit ? "Edit budget" : "Set a monthly budget"}
@@ -130,21 +137,20 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
-                <div className="max-h-56 overflow-y-auto">
-                  <CatRow
-                    label="Overall — all spending"
-                    active={categoryValue === OVERALL}
-                    onClick={() => { setCategoryValue(OVERALL); setCategoryOpen(false) }}
-                  />
-                  {expenseCategories.map((c) => (
-                    <CatRow
-                      key={String(c.id)}
-                      label={`${c.icon}  ${c.name}`}
-                      active={categoryValue === String(c.id)}
-                      onClick={() => { setCategoryValue(String(c.id)); setCategoryOpen(false) }}
-                    />
-                  ))}
-                </div>
+                <PickerList
+                  searchable
+                  searchPlaceholder="Search categories…"
+                  maxHeightClass="max-h-56"
+                  options={[
+                    { key: OVERALL, label: "Overall — all spending" },
+                    ...expenseCategories.map((c) => ({ key: String(c.id), label: c.name })),
+                  ]}
+                  value={categoryValue}
+                  onSelect={(key) => {
+                    setCategoryValue(key)
+                    setCategoryOpen(false)
+                  }}
+                />
               </PopoverContent>
             </Popover>
             {isEdit && (
@@ -178,22 +184,32 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
           {isEdit ? (
             <Button
               variant="ghost"
-              onClick={remove}
-              disabled={saving}
-              className="text-[var(--neg)] hover:text-[var(--neg)] gap-2"
+              onClick={removeConfirm.trigger}
+              onBlur={removeConfirm.disarm}
+              disabled={busy}
+              className={
+                removeConfirm.armed || removing
+                  ? "gap-2 bg-[var(--neg)] text-white hover:bg-[var(--neg)] hover:text-white disabled:opacity-80"
+                  : "gap-2 text-[var(--neg)] hover:text-[var(--neg)]"
+              }
             >
-              <Trash2 className="h-4 w-4" /> Remove
+              {removing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              {removing ? "Removing…" : removeConfirm.armed ? "Tap to confirm" : "Remove"}
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
               Cancel
             </Button>
             <Button
               onClick={save}
-              disabled={saving}
+              disabled={busy}
               className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
             >
               {saving ? "Saving..." : isEdit ? "Save" : "Set budget"}
@@ -202,26 +218,5 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function CatRow({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
-        active ? "bg-muted font-medium" : ""
-      }`}
-    >
-      {label}
-    </button>
   )
 }

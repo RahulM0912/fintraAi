@@ -18,6 +18,27 @@ import { financeTools } from "./tools";
 import { ModelProvider, DEFAULT_MODEL_CONFIG } from "./types";
 import { getCheckpointer } from "./checkpointer";
 
+// ─── Message-content normalization ─────────────────────────────────────────────
+//
+// Providers differ in message-content shape: OpenAI-style models use a plain
+// string, Gemini an array of parts ({ type: "text", text }). Any code that
+// treats content as string-only silently loses Gemini text.
+export function messageText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((p) =>
+        typeof p === "string"
+          ? p
+          : p && typeof p === "object" && typeof (p as { text?: unknown }).text === "string"
+          ? (p as { text: string }).text
+          : ""
+      )
+      .join("");
+  }
+  return "";
+}
+
 // ─── Tool executor node ────────────────────────────────────────────────────────
 
 const toolNode = new ToolNode(financeTools);
@@ -148,7 +169,7 @@ function afterTools(
   const { ai, toolMsgs } = batch;
 
   // The agent must have emitted ONLY tool calls (no prose to stream).
-  const text = typeof ai.content === "string" ? ai.content.trim() : "";
+  const text = messageText(ai.content).trim();
   if (text) return "agent";
 
   const calls = ai.tool_calls ?? [];

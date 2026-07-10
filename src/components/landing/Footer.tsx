@@ -2,17 +2,14 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <div className="border-t border-[var(--ld-border)] mx-4 md:mx-8">
-      <footer className="max-w-[1100px] mx-auto py-8 flex items-center justify-between flex-wrap gap-4">
+    <div className="mx-4 border-t border-[var(--hairline)] md:mx-8">
+      <footer className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-4 py-8">
         <div>
-          <div className="font-sora font-bold text-[var(--ld-purple)] flex items-center gap-2 text-[1.1rem]">
-            <span className="w-[26px] h-[26px] rounded-lg bg-[var(--ld-purple)] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              ✦
-            </span>
+          <p className="font-display text-[1.1rem] font-semibold tracking-tight text-[var(--ink)]">
             Fintra
-          </div>
-          <p className="mt-1 text-[0.8rem] text-[var(--ld-text3)]">
-            AI-powered personal finance tracker
+          </p>
+          <p className="mt-1 text-[0.8rem] text-[var(--ink-3)]">
+            Money, plainly told.
           </p>
         </div>
 
@@ -25,7 +22,7 @@ export function Footer() {
             <Link
               key={label}
               href={href}
-              className="text-[0.85rem] text-[var(--ld-text2)] hover:text-[var(--ld-purple)] transition-colors duration-200"
+              className="text-[0.85rem] text-[var(--ink-2)] transition-colors duration-150 hover:text-[var(--ink)]"
             >
               {label}
             </Link>

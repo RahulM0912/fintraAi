@@ -21,11 +21,11 @@ export function TransactionPicker({ data, onResolve, disabled }: Props) {
   const actionLabel = data.action === "delete" ? "Delete" : "Edit";
   const accent =
     data.action === "delete"
-      ? "border-destructive/40 bg-destructive/5"
-      : "border-[var(--brand)]/40 bg-[var(--brand)]/5";
+      ? "border-[var(--neg)]/40 bg-[var(--neg-bg)]/60"
+      : "border-[var(--brand-border)] bg-[var(--brand-bg)]/60";
 
   return (
-    <div className={`mt-3 rounded-xl border-2 ${accent} p-3`}>
+    <div className={`mt-3 rounded-lg border ${accent} p-3`}>
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <ActionIcon className="h-3.5 w-3.5" />
         {data.question}
@@ -46,8 +46,8 @@ export function TransactionPicker({ data, onResolve, disabled }: Props) {
             >
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="font-medium">{c.category}</span>
-                <span className={c.type === "expense" ? "font-semibold text-rose-600 dark:text-rose-400" : "font-semibold text-emerald-600 dark:text-emerald-400"}>
-                  {c.type === "expense" ? "-" : "+"}{formatAmount(c.amount)}
+                <span className={`tnum font-semibold ${c.type === "expense" ? "text-[var(--neg)]" : "text-[var(--pos)]"}`}>
+                  {c.type === "expense" ? "−" : "+"}{formatAmount(c.amount)}
                 </span>
               </div>
               <div className="text-muted-foreground">

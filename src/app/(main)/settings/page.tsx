@@ -1,95 +1,80 @@
 "use client"
 
-import { useState } from "react"
 import { useAuth } from "@/components/auth/AuthProvider"
-import { getUserDisplay } from "@/utils/userDisplay"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navbar/ThemeToggle"
-import { ManageAccountModal } from "@/components/common/ManageAccountModal"
+import { ProfileSection } from "@/components/settings/ProfileSection"
 import { RecurringSection } from "@/components/settings/RecurringSection"
 import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
 import { DataSection } from "@/components/settings/DataSection"
-import { Palette, UserRound } from "lucide-react"
+import { LogOut } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
-  const [manageOpen, setManageOpen] = useState(false)
-
-  const { displayName, email, avatarUrl, initials } = getUserDisplay(user)
+  const { signOut } = useAuth()
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-24">
-      <div>
-        <h1 className="font-sora text-[26px] font-bold tracking-tight text-[var(--ink)]">
+    <div className="mx-auto max-w-3xl px-5 pt-6 pb-12 sm:px-8 lg:pt-12 lg:pb-16">
+      {/* Mobile gets the title from the app header */}
+      <div className="hidden lg:block">
+        <div className="flex items-center gap-3">
+          <span aria-hidden className="h-px w-6 bg-[var(--brand)]" />
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+            Preferences
+          </p>
+        </div>
+        <h1 className="font-display mt-3 text-[32px] font-semibold tracking-tight text-[var(--ink)]">
           Settings
         </h1>
-        <p className="text-sm text-[var(--ink-2)] mt-0.5">
-          Manage your account, appearance, and AI preferences.
-        </p>
       </div>
 
-      {/* Profile */}
-      <Section icon={UserRound} title="Profile">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-12 w-12 rounded-xl shrink-0">
-            <AvatarImage src={avatarUrl} alt={displayName} className="rounded-xl" />
-            <AvatarFallback className="bg-[var(--brand)] text-white rounded-xl font-semibold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-[var(--ink)] truncate">{displayName}</p>
-            <p className="text-sm text-[var(--ink-3)] truncate">{email}</p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => setManageOpen(true)}
-            className="shrink-0"
+      <div className="mt-0 space-y-10 lg:mt-10">
+        {/* Profile — account management lives inline here, the one home for it */}
+        <ProfileSection />
+
+        {/* Appearance */}
+        <Section title="Appearance">
+          <Row title="Theme" desc="Switch between light and dark.">
+            <ThemeToggle />
+          </Row>
+        </Section>
+
+        {/* AI */}
+        <AiSettingsSection />
+
+        {/* Recurring */}
+        <RecurringSection />
+
+        {/* Data */}
+        <DataSection />
+
+        {/* Sign out */}
+        <div className="border-t border-[var(--hairline)] pt-6">
+          <button
+            onClick={() => signOut()}
+            className="cursor-pointer inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--hairline-strong)] px-5 text-sm font-medium text-[var(--neg)] transition-colors duration-150 ease-out hover:border-[var(--neg)] hover:bg-[var(--neg-bg)]"
           >
-            Manage account
-          </Button>
+            <LogOut className="h-4 w-4" aria-hidden />
+            Sign out
+          </button>
         </div>
-      </Section>
+      </div>
 
-      {/* Appearance */}
-      <Section icon={Palette} title="Appearance">
-        <Row title="Theme" desc="Switch between light and dark mode.">
-          <ThemeToggle />
-        </Row>
-      </Section>
-
-      {/* AI */}
-      <AiSettingsSection />
-
-      {/* Recurring */}
-      <RecurringSection />
-
-      {/* Data */}
-      <DataSection />
-
-      <p className="text-center text-xs text-[var(--ink-3)] pt-2">Fintra · v0.1</p>
-
-      <ManageAccountModal open={manageOpen} onClose={() => setManageOpen(false)} />
+      <p className="pt-10 text-xs text-[var(--ink-3)]">Fintra · v0.1</p>
     </div>
   )
 }
 
 function Section({
-  icon: Icon,
   title,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>
   title: string
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-[var(--ink-3)]" />
-        <h2 className="font-sora text-sm font-semibold text-[var(--ink)]">{title}</h2>
-      </div>
+    <section className="border-t border-[var(--hairline)] pt-6 first:border-t-0 first:pt-0 lg:first:border-t lg:first:pt-6">
+      <h2 className="mb-5 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
+        {title}
+      </h2>
       {children}
     </section>
   )
@@ -108,7 +93,7 @@ function Row({
     <div className="flex items-center justify-between gap-4 py-1">
       <div className="min-w-0">
         <p className="text-sm font-medium text-[var(--ink)]">{title}</p>
-        <p className="text-xs text-[var(--ink-3)] mt-0.5">{desc}</p>
+        <p className="mt-0.5 text-xs text-[var(--ink-3)]">{desc}</p>
       </div>
       <div className="shrink-0">{children}</div>
     </div>

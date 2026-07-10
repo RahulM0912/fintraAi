@@ -14,7 +14,9 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useTransactionStore } from "@/store/transactionStore"
-import { CalendarIcon, ChevronDown, IndianRupee, Search, Tag } from "lucide-react"
+import { getLastCategory, postAddToast, rememberLastCategory } from "@/lib/quickAdd"
+import { PickerList } from "@/components/ui/picker-list"
+import { CalendarIcon, ChevronDown, IndianRupee, Tag } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -34,8 +36,8 @@ type Props = {
   onSuccess?: (result: any) => void
   /** Pass to open in edit mode */
   transaction?: ExistingTransaction | null
-  /** Seed amount/description when opening in create mode (e.g. from quick-add) */
-  prefill?: { amount?: number; description?: string }
+  /** Seed fields when opening in create mode (e.g. from quick-add) */
+  prefill?: { amount?: number; description?: string; categoryId?: string }
 }
 
 export function TransactionModal({ open, onOpenChange, type, onSuccess, transaction, prefill }: Props) {
@@ -64,8 +66,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [catSearch, setCatSearch] = useState("")
-  const catSearchRef = useRef<HTMLInputElement>(null)
+  const amountRef = useRef<HTMLInputElement>(null)
 
   // Seed fields when opening in edit mode
   useEffect(() => {
@@ -79,14 +80,24 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
   }, [open, isEditMode, transaction])
 
   // Create mode: sync the type prop on open (modal instance is reused globally),
-  // then seed any quick-add prefill (amount/description).
+  // then seed any quick-add prefill (amount/description/category).
   useEffect(() => {
     if (open && !isEditMode) {
       setInternalTxType(type)
       if (prefill?.amount != null) setAmount(prefill.amount)
       if (prefill?.description) setDescription(prefill.description)
+      if (prefill?.categoryId) setCategoryId(String(prefill.categoryId))
     }
   }, [open, isEditMode, type, prefill])
+
+  // Create mode: preselect the last-used category for this type once
+  // categories are in — most people log the same 2–3 categories daily,
+  // so the modal opens pre-answered.
+  useEffect(() => {
+    if (!open || isEditMode || categoryId || prefill?.categoryId) return
+    const last = getLastCategory(internalTxType)
+    if (last && categories.some((c) => String(c.id) === last)) setCategoryId(last)
+  }, [open, isEditMode, categoryId, prefill, internalTxType, categories])
 
   // Load categories whenever the modal opens or type toggles
   useEffect(() => {
@@ -99,14 +110,6 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isIncome])
 
-  // Auto-focus category search input
-  useEffect(() => {
-    if (categoryOpen) {
-      setCatSearch("")
-      setTimeout(() => catSearchRef.current?.focus(), 50)
-    }
-  }, [categoryOpen])
-
   // Reset all fields on close
   useEffect(() => {
     if (!open) {
@@ -116,16 +119,11 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
       setSelectedDate(new Date())
       setCategoryOpen(false)
       setCalendarOpen(false)
-      setCatSearch("")
       setIsSaving(false)
     }
   }, [open])
 
   const selectedCategory = categories.find((c) => String(c.id) === String(categoryId))
-
-  const filteredCategories = catSearch.trim()
-    ? categories.filter((c) => c.name.toLowerCase().startsWith(catSearch.toLowerCase()))
-    : categories
 
   function validate() {
     if (!amount || Number(amount) <= 0) {
@@ -139,7 +137,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
     return true
   }
 
-  async function handleCreate() {
+  async function handleCreate(keepOpen = false) {
     if (!validate()) return
 
     const normalizedCategory =
@@ -147,7 +145,8 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
         ? Number(categoryId)
         : categoryId
 
-    const created = await addTransaction(isIncome ? "income" : "expense", {
+    const txType = isIncome ? "income" : ("expense" as const)
+    const created = await addTransaction(txType, {
       description: description || undefined,
       amount: Number(amount),
       categoryId: normalizedCategory,
@@ -155,13 +154,36 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
     })
 
     if (created) {
-      toast.success(`${isIncome ? "Income" : "Expense"} added successfully`)
-      onOpenChange(false)
+      rememberLastCategory(txType, String(categoryId))
+      postAddToast({
+        id: created.id,
+        amount: Number(amount),
+        type: txType,
+        categoryId: String(categoryId),
+        categoryName: selectedCategory?.name,
+      })
+      if (keepOpen) {
+        // Batch entry: keep type/category/date, clear what changes per entry.
+        // Don't call onSuccess — the provider closes the modal in it.
+        setAmount("")
+        setDescription("")
+        amountRef.current?.focus()
+      } else {
+        onOpenChange(false)
+        onSuccess?.(created)
+      }
       window.dispatchEvent(new Event("transaction-added"))
-      onSuccess?.(created)
     } else {
       toast.error("Failed to create transaction. Try again.")
     }
+  }
+
+  // Enter in a text field saves — logging shouldn't need the mouse.
+  function submitOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    if (isEditMode) handleEdit()
+    else handleCreate()
   }
 
   async function handleEdit() {
@@ -197,9 +219,18 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-lg rounded-2xl px-6 py-4 sm:px-8 sm:py-7 bg-white dark:bg-zinc-900 max-h-[90dvh] overflow-y-auto">
+      <DialogContent
+        // Land on the amount — the one field the user always knows.
+        onOpenAutoFocus={(e) => {
+          if (!isEditMode) {
+            e.preventDefault()
+            amountRef.current?.focus()
+          }
+        }}
+        className="max-w-[calc(100%-3rem)] sm:max-w-lg rounded-xl px-6 py-4 sm:px-8 sm:py-7 bg-[var(--surface)] max-h-[90dvh] overflow-y-auto"
+      >
         <DialogHeader className="pb-0 sm:pb-1">
-          <DialogTitle className="text-lg sm:text-2xl font-bold leading-tight">
+          <DialogTitle className="font-display text-lg sm:text-2xl font-semibold leading-tight">
             {isEditMode ? "Edit " : "Create a "}
             <span className={isIncome ? "text-[var(--pos)]" : "text-[var(--neg)]"}>
               {isEditMode ? (isIncome ? "income" : "expense") : `new ${isIncome ? "income" : "expense"}`}
@@ -246,11 +277,12 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Transaction description (optional)"
+              onKeyDown={submitOnEnter}
+              placeholder='What was it? e.g. "chai with Ravi" (optional)'
               className="rounded-xl"
             />
             <p className="text-xs text-muted-foreground hidden sm:block">
-              Keep it short — e.g. &quot;Freelance - Jan Invoice&quot;.
+              Skip it if the category already says enough — no need to repeat it.
             </p>
           </div>
 
@@ -265,12 +297,14 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                   <IndianRupee className="h-4 w-4" />
                 </span>
                 <Input
+                  ref={amountRef}
                   type="number"
                   inputMode="decimal"
                   step="0.01"
                   min={0}
                   value={amount as any}
                   onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  onKeyDown={submitOnEnter}
                   placeholder="0.00"
                   className="pl-9 rounded-xl"
                 />
@@ -286,7 +320,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
                     <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{format(selectedDate, "MM/dd/yyyy")}</span>
+                    <span>{format(selectedDate, "dd MMM yyyy")}</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -315,40 +349,24 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
                   <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className={selectedCategory ? "text-foreground" : "text-muted-foreground"}>
                     {selectedCategory
-                      ? `${selectedCategory.icon}  ${selectedCategory.name}`
+                      ? selectedCategory.name
                       : "Select a category"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    ref={catSearchRef}
-                    value={catSearch}
-                    onChange={(e) => setCatSearch(e.target.value)}
-                    placeholder="Search categories…"
-                    className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-                <div className="max-h-52 overflow-y-scroll" onWheel={(e) => e.stopPropagation()}>
-                  {filteredCategories.length === 0 && (
-                    <p className="text-sm text-muted-foreground px-3 py-2">No results</p>
-                  )}
-                  {filteredCategories.map((c) => (
-                    <button
-                      key={String(c.id)}
-                      onClick={() => { setCategoryId(String(c.id)); setCategoryOpen(false) }}
-                      className={`cursor-pointer w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-muted transition-colors ${
-                        categoryId === String(c.id) ? "bg-muted font-medium" : ""
-                      }`}
-                    >
-                      <span className="text-base">{c.icon}</span>
-                      <span>{c.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <PickerList
+                  searchable
+                  searchPlaceholder="Search categories…"
+                  maxHeightClass="max-h-52"
+                  options={categories.map((c) => ({ key: String(c.id), label: c.name }))}
+                  value={categoryId}
+                  onSelect={(key) => {
+                    setCategoryId(key)
+                    setCategoryOpen(false)
+                  }}
+                />
               </PopoverContent>
             </Popover>
             <p className="text-xs text-muted-foreground hidden sm:block">Choose a category for this transaction</p>
@@ -364,8 +382,18 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           >
             Cancel
           </Button>
+          {!isEditMode && (
+            <Button
+              variant="ghost"
+              onClick={() => handleCreate(true)}
+              disabled={isLoading}
+              className="flex-1 sm:flex-none text-[var(--brand)] hover:text-[var(--brand-hover)]"
+            >
+              Save & add another
+            </Button>
+          )}
           <Button
-            onClick={isEditMode ? handleEdit : handleCreate}
+            onClick={() => (isEditMode ? handleEdit() : handleCreate())}
             disabled={isLoading}
             className="flex-1 sm:flex-none bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
           >

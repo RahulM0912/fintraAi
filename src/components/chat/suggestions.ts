@@ -19,21 +19,20 @@ export const ASSISTANT_SUGGESTIONS: ChipSuggestion[] = [
 
 export const PAGE_WELCOME: Message = {
   role: "ai",
-  content: `Hi! I'm **Fintra AI**, your personal finance assistant.
+  content: `I read your ledger and act on it. Tell me what you spent and I'll log it; ask what happened and I'll explain the month.
 
-Here's what I can do for you:
-• **Add transactions** — "Add ₹500 for food today"
-• **Bulk add** — "Add ₹500 food, ₹200 cab, ₹1000 rent today"
-• **View & filter** — "Show last week's expenses"
-• **Edit / delete** — "Update my last food expense to ₹600"
-• **Analytics** — "Where did I spend most this month?"
-• **Trends** — "Compare my spending this year vs last"
+A few things that work well:
+• "Add ₹500 for food today" — logs it
+• "₹500 food, ₹200 cab, ₹1000 rent — all today" — logs all three
+• "Show last week's expenses" — pulls the records
+• "Update my last food expense to ₹600" — edits it
+• "Where did I spend most this month?" — names the culprit
 
-What would you like to do?`,
+I'll always check with you before deleting anything or moving a large amount.`,
 };
 
 export const ASSISTANT_WELCOME: Message = {
   role: "ai",
   content:
-    "Hi! I'm your Fintra AI assistant. I can add transactions, show spending summaries, and help you manage your finances. What would you like to do?",
+    "I read your ledger and act on it — tell me what you spent, or ask where the money went.",
 };
