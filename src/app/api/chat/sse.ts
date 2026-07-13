@@ -1,9 +1,11 @@
 import type { InterruptPayload } from "@/lib/langgraph";
+import type { DataTablePayload } from "@/lib/langgraph/render";
 
 // ─── SSE event contract (server → client) ──────────────────────────────────────
 
 export type SSEEvent =
   | { type: "token"; content: string }
+  | { type: "data"; table: DataTablePayload }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
   | { type: "status"; step: string; label: string }
@@ -64,5 +66,7 @@ function classifyError(err: unknown): string {
 
   if (is404) return `Model not found on OpenRouter. Check the model slug. Raw: ${msg}`;
   if (is429) return "AI rate limit reached. Please wait a moment and try again.";
+  if (msg.includes("Recursion limit"))
+    return "That request needed too many steps — try breaking it into smaller parts.";
   return `Something went wrong: ${msg || "unknown error"}`;
 }

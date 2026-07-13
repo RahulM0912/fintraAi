@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -14,6 +14,8 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
+  /** When provided, the send button becomes a stop button while loading. */
+  onStop?: () => void;
   isLoading: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -21,7 +23,7 @@ interface Props {
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
-  { value, onChange, onSend, isLoading, disabled, placeholder, variant = "textarea" },
+  { value, onChange, onSend, onStop, isLoading, disabled, placeholder, variant = "textarea" },
   ref
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -65,15 +67,27 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
           className="min-h-[40px] max-h-[160px] resize-none overflow-y-auto rounded-lg border-[var(--hairline-strong)] bg-transparent px-4 py-2 leading-5 focus-visible:ring-2 focus-visible:ring-ring/50"
           disabled={isLoading || disabled}
         />
-        <Button
-          onClick={onSend}
-          size="icon"
-          className="h-10 w-10 shrink-0 rounded-full"
-          disabled={isLoading || disabled || !value.trim()}
-          aria-label="Send"
-        >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        {isLoading && onStop ? (
+          <Button
+            onClick={onStop}
+            size="icon"
+            variant="outline"
+            className="h-10 w-10 shrink-0 rounded-full"
+            aria-label="Stop"
+          >
+            <Square className="h-3.5 w-3.5 fill-current" />
+          </Button>
+        ) : (
+          <Button
+            onClick={onSend}
+            size="icon"
+            className="h-10 w-10 shrink-0 rounded-full"
+            disabled={isLoading || disabled || !value.trim()}
+            aria-label="Send"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
     );
   }
@@ -90,15 +104,27 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         disabled={isLoading || disabled}
         rows={1}
       />
-      <Button
-        onClick={onSend}
-        size="icon"
-        className="h-12 w-12 shrink-0 rounded-lg"
-        disabled={isLoading || disabled || !value.trim()}
-        aria-label="Send"
-      >
-        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-      </Button>
+      {isLoading && onStop ? (
+        <Button
+          onClick={onStop}
+          size="icon"
+          variant="outline"
+          className="h-12 w-12 shrink-0 rounded-lg"
+          aria-label="Stop"
+        >
+          <Square className="h-4 w-4 fill-current" />
+        </Button>
+      ) : (
+        <Button
+          onClick={onSend}
+          size="icon"
+          className="h-12 w-12 shrink-0 rounded-lg"
+          disabled={isLoading || disabled || !value.trim()}
+          aria-label="Send"
+        >
+          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+        </Button>
+      )}
     </div>
   );
 });

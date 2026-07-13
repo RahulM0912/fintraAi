@@ -6,6 +6,7 @@ import { calculateCost } from "@/lib/langgraph/types";
 import { summarizeHistory } from "@/lib/langgraph/summarize";
 import { consumeChatQuota, type EffectiveModel } from "@/lib/userSettings";
 import type { InterruptPayload, InterruptResume } from "@/lib/langgraph";
+import type { DataTablePayload } from "@/lib/langgraph/render";
 import type { SSEEvent } from "./sse";
 
 // ─── Conversation window ───────────────────────────────────────────────────────
@@ -99,10 +100,19 @@ export async function runChat(
 
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let totalCachedTokens = 0;
+  let llmCalls = 0;
+  const toolsUsed: string[] = [];
+  const fastPathDone = new Set<string>();
+  const startedAt = Date.now();
   let sentText = false;
 
   const config = {
     version: "v2" as const,
+    // Each node execution counts as a step (agent → tools → agent…), so 16
+    // allows ~7 tool round-trips before the graph aborts. LangGraph default is
+    // 25; a runaway loop burns the full prefix cost on every extra call.
+    recursionLimit: 16,
     configurable: {
       thread_id: body.threadId,
       userId,
@@ -116,12 +126,14 @@ export async function runChat(
   for await (const event of fintraGraph.streamEvents(input, config)) {
     switch (event.event) {
       case "on_chain_start": {
-        if (event.metadata?.langgraph_node === "agent") {
+        const startNode = event.metadata?.langgraph_node;
+        if (startNode === "agent" || startNode === "gate") {
           send({ type: "status", step: "thinking", label: "Thinking..." });
         }
         break;
       }
       case "on_tool_start":
+        toolsUsed.push(event.name);
         send({ type: "tool_start", tool: event.name });
         break;
       case "on_tool_end":
@@ -137,20 +149,34 @@ export async function runChat(
         break;
       }
       case "on_chat_model_end": {
+        llmCalls++;
         const usage = event.data?.output?.usage_metadata;
         if (usage) {
           totalInputTokens += usage.input_tokens || 0;
           totalOutputTokens += usage.output_tokens || 0;
+          totalCachedTokens += usage.input_token_details?.cache_read || 0;
         }
         break;
       }
       case "on_chain_end": {
-        // Fast-path confirmation is synthesised (no model stream) — forward its
-        // text to the client as a single token chunk.
-        if (event.metadata?.langgraph_node === "confirm") {
+        // Fast-path nodes synthesise their output without a model stream —
+        // forward text as a single token chunk, and for render also forward
+        // the structured table payload. on_chain_end can fire more than once
+        // per node (wrapper + callable), so guard against double-sends.
+        const node = event.metadata?.langgraph_node;
+        if (
+          (node === "confirm" || node === "render" || node === "gate") &&
+          !fastPathDone.has(node)
+        ) {
           const msgs = event.data?.output?.messages;
           const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined;
-          const content = messageText(msg?.content);
+          if (!msg) break;
+          fastPathDone.add(node);
+          const table = (
+            msg.additional_kwargs as { fintra_table?: DataTablePayload } | undefined
+          )?.fintra_table;
+          if (table) send({ type: "data", table });
+          const content = messageText(msg.content);
           if (content) {
             sentText = true;
             send({ type: "token", content });
@@ -172,6 +198,22 @@ export async function runChat(
     }
   }
 
+  // Per-turn metrics (Phase A of the improvement plan) — one structured line
+  // so token regressions are visible without extra tooling.
+  console.log(
+    "[chat-metrics]",
+    JSON.stringify({
+      model: model.modelName,
+      llmCalls,
+      inputTok: totalInputTokens,
+      outputTok: totalOutputTokens,
+      cachedTok: totalCachedTokens,
+      tools: toolsUsed,
+      resume: !!body.resume,
+      ms: Date.now() - startedAt,
+    })
+  );
+
   // After the run, check whether the graph paused on an interrupt.
   const state = await fintraGraph.getState({ configurable: { thread_id: body.threadId } });
   const pendingInterrupts = (state.tasks ?? [])
@@ -186,9 +228,11 @@ export async function runChat(
   }
 
   // Safety net: if no token ever made it to the client (e.g. a provider chunk
-  // shape we didn't anticipate), recover the final AI message from graph state
-  // so the user never sees a silent, empty reply.
+  // shape we didn't anticipate, or a model that returned an empty candidate),
+  // recover the final AI message from graph state; failing that, send a fixed
+  // reply so the user never sees a silent, empty bubble.
   if (!sentText) {
+    let recovered = "";
     const msgs = (state.values as { messages?: unknown[] } | undefined)?.messages;
     if (Array.isArray(msgs)) {
       for (let i = msgs.length - 1; i >= 0; i--) {
@@ -199,12 +243,17 @@ export async function runChat(
         };
         const kind = m?.getType?.() ?? m?._getType?.();
         if (kind === "ai") {
-          const content = messageText(m.content);
-          if (content) send({ type: "token", content });
+          recovered = messageText(m.content).trim();
           break;
         }
       }
     }
+    send({
+      type: "token",
+      content:
+        recovered ||
+        "I hit a temporary glitch composing that reply — please send your message again.",
+    });
   }
 
   // Turn completed — fold any overflow past the verbatim window into the running

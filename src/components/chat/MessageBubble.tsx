@@ -4,6 +4,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { MarkdownContent } from "@/components/common/MarkdownContent";
 import type { ActivityItem, InterruptResume, Message } from "@/lib/chat/types";
 import { ActivityLog } from "./ActivityLog";
+import { DataTable } from "./DataTable";
 import { InterruptCard } from "./InterruptCard";
 
 /* Correspondence, not chat balloons: the agent speaks in flat prose on the
@@ -65,6 +66,9 @@ export function MessageBubble({
         ) : message.isStreaming && activityLog.length === 0 ? (
           <Loader2 className="h-4 w-4 animate-spin text-[var(--ink-3)]" />
         ) : null}
+
+        {/* Structured table from the render fast-path */}
+        {message.table && <DataTable table={message.table} />}
 
         {/* HITL prompt — only after streaming completes */}
         {!message.isStreaming && message.interrupt && onResolveInterrupt && (
