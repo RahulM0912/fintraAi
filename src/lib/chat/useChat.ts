@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { newThreadId } from "./threadId";
 import { parseSSE } from "./sseParser";
+import { stripHarmonyLeak } from "./harmony";
 import { useActivityLog } from "./useActivityLog";
 import type {
+  ChartPayload,
   DataTablePayload,
   InterruptPayload,
   InterruptResume,
@@ -43,7 +45,7 @@ function restoreMessages(cached: Message[] | undefined): Message[] | null {
   if (!cached?.length) return null;
   const cleaned = cached
     .map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
-    .filter((m) => m.role === "user" || m.content || m.table || m.interrupt);
+    .filter((m) => m.role === "user" || m.content || m.table || m.chart || m.interrupt);
   return cleaned.length ? cleaned : null;
 }
 
@@ -61,6 +63,9 @@ interface StreamCtx {
   interrupt: InterruptPayload | null;
   tools: string[];
   table: DataTablePayload | null;
+  chart: ChartPayload | null;
+  facts: string[] | null;
+  suggestions: string[] | null;
 }
 
 // The welcome message is UI chrome each surface renders itself — it is NOT
@@ -105,17 +110,24 @@ export function useChat({ trackUsage = false, sessionKey = "default" }: UseChatO
       if (event.type === "token") {
         if (!ctx.content) activity.markAllDone();
         ctx.content += event.content;
+        // Display (and later store) only the leak-free text; while a Harmony
+        // reasoning leak is mid-stream this is "" and the bubble keeps its
+        // spinner instead of showing chain-of-thought.
         setMessages((prev) => [
           ...prev.slice(0, -1),
           {
             role: "ai",
-            content: ctx.content,
+            content: stripHarmonyLeak(ctx.content),
             table: ctx.table ?? undefined,
+            chart: ctx.chart ?? undefined,
+            facts: ctx.facts ?? undefined,
             isStreaming: true,
           },
         ]);
       } else if (event.type === "data") {
-        ctx.table = event.table;
+        ctx.table = event.table ?? ctx.table;
+        ctx.chart = event.chart ?? ctx.chart;
+        ctx.facts = event.facts ?? ctx.facts;
       } else if (event.type === "status") {
         activity.upsert(event.step, event.label, "active");
       } else if (event.type === "tool_start") {
@@ -137,13 +149,22 @@ export function useChat({ trackUsage = false, sessionKey = "default" }: UseChatO
       } else if (event.type === "summary") {
         summaryRef.current = event.summary;
         summarizedCountRef.current = event.summarizedCount;
+      } else if (event.type === "suggestions") {
+        ctx.suggestions = event.items;
       } else if (event.type === "done") {
+        // Stored content is the stripped text — it's what gets re-sent as
+        // history, and leaked reasoning in history derails the next turn.
+        // If stripping leaves nothing (leak never reached "assistantfinal"),
+        // fall back to the raw text over an empty bubble.
         setMessages((prev) => [
           ...prev.slice(0, -1),
           {
             role: "ai",
-            content: ctx.content,
+            content: stripHarmonyLeak(ctx.content) || ctx.content,
             table: ctx.table ?? undefined,
+            chart: ctx.chart ?? undefined,
+            facts: ctx.facts ?? undefined,
+            suggestions: ctx.suggestions ?? undefined,
             isStreaming: false,
             toolsUsed: ctx.tools.length > 0 ? [...ctx.tools] : undefined,
             interrupt: ctx.interrupt ?? undefined,
@@ -170,6 +191,9 @@ export function useChat({ trackUsage = false, sessionKey = "default" }: UseChatO
         interrupt: null,
         tools: [],
         table: null,
+        chart: null,
+        facts: null,
+        suggestions: null,
       };
       const abort = new AbortController();
       abortRef.current = abort;
@@ -204,8 +228,10 @@ export function useChat({ trackUsage = false, sessionKey = "default" }: UseChatO
             ...prev.slice(0, -1),
             {
               role: "ai",
-              content: ctx.content || "Stopped.",
+              content: stripHarmonyLeak(ctx.content) || "Stopped.",
               table: ctx.table ?? undefined,
+              chart: ctx.chart ?? undefined,
+              facts: ctx.facts ?? undefined,
               isStreaming: false,
             },
           ]);

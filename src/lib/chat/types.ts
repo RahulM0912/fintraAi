@@ -31,12 +31,39 @@ export interface DataTablePayload {
   rows: (string | number)[][];
 }
 
+// Structured chart payload (mirror of server render.ts) — data only, the
+// client owns colors and marks. `style` is the model's presentation pick
+// (validated server-side); `title` is the card's eyebrow label.
+export type ChartStyle = "bar" | "line" | "area";
+
+export type ChartPayload =
+  | {
+      kind: "series";
+      unit: "day" | "month";
+      style: ChartStyle;
+      title: string;
+      points: { label: string; income: number; expense: number }[];
+    }
+  | {
+      kind: "shares";
+      title: string;
+      items: { name: string; amount: number; pct: number }[];
+    }
+  | {
+      kind: "progress";
+      title: string;
+      items: { name: string; cap: number; spent: number; pct: number }[];
+    };
+
 export interface Message {
   role: "user" | "ai";
   content: string;
   isStreaming?: boolean;
   toolsUsed?: string[];
   table?: DataTablePayload;           // structured table from the render fast-path
+  chart?: ChartPayload;               // structured chart from the render fast-path
+  facts?: string[];                   // short computed facts under the headline
+  suggestions?: string[];             // AI-generated follow-up questions
   interrupt?: InterruptPayload;       // pending HITL prompt attached to the bubble
   interruptResolved?: boolean;        // user already answered this prompt
 }
@@ -51,12 +78,13 @@ export interface ActivityItem {
 
 export type SSEEvent =
   | { type: "token"; content: string }
-  | { type: "data"; table: DataTablePayload }
+  | { type: "data"; table?: DataTablePayload; chart?: ChartPayload; facts?: string[] }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
   | { type: "status"; step: string; label: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
   | { type: "summary"; summary: string; summarizedCount: number }
+  | { type: "suggestions"; items: string[] }
   | { type: "interrupt"; threadId: string; payload: InterruptPayload }
   | { type: "done" }
   | { type: "error"; message: string };

@@ -114,10 +114,12 @@ const GATE_PROMPT = `You are the front door of Fintra, a personal-finance assist
 
 Read the user's latest message in context. Reply with exactly PASS when it needs any finance data or action — or when you are unsure.
 
+Always PASS: anything about the user's money, spending, income, budgets, transactions, or trends — including short follow-ups to a previous answer ("how does this compare to last month?", "and in June?", "why so high?"). The main assistant can look all of that up. You have NO data access: never claim data is unavailable and never ask the user to supply their own numbers — PASS instead.
+
 Otherwise reply with the exact message to show the user:
 - greeting / small talk / thanks → one short friendly line (you may mention what you can do)
 - off-topic for a finance app → decline briefly and point to what you can help with
-- too vague to act on → ask ONE short clarifying question`;
+- too vague to act on (no money topic at all) → ask ONE short clarifying question`;
 
 async function gateNode(
   state: typeof MessagesAnnotation.State,
@@ -318,12 +320,17 @@ function renderNode(
 ): Partial<typeof MessagesAnnotation.State> {
   const batch = lastToolBatch(state.messages);
   const call = batch?.ai.tool_calls?.[0];
-  const view = call ? buildDataView(call.name, batch?.toolMsgs[0]?.content) : null;
+  const hint = (call?.args as { chart?: string } | undefined)?.chart;
+  const view = call ? buildDataView(call.name, batch?.toolMsgs[0]?.content, hint) : null;
   return {
     messages: [
       new AIMessage({
         content: view?.headline ?? "Here's what I found.",
-        additional_kwargs: view?.table ? { fintra_table: view.table } : {},
+        additional_kwargs: {
+          ...(view?.table ? { fintra_table: view.table } : {}),
+          ...(view?.chart ? { fintra_chart: view.chart } : {}),
+          ...(view?.facts ? { fintra_facts: view.facts } : {}),
+        },
       }),
     ],
   };

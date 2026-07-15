@@ -85,7 +85,9 @@ export default function ChatPage() {
                 message={msg}
                 activityLog={isLast ? chat.activityLog : []}
                 isLoading={chat.isLoading}
+                isLast={isLast}
                 onResolveInterrupt={chat.resumeInterrupt}
+                onSuggestion={handleSuggestion}
               />
             );
           })}

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { useChartTokens, compactINR } from "@/lib/useChartTokens";
 import type { TrendPoint } from "@/lib/server/dashboardData";
 import {
   LineChart,
@@ -17,43 +18,6 @@ import {
 
 const RANGES = [6, 12] as const;
 type Range = (typeof RANGES)[number];
-
-// Recharts renders to SVG and passes stroke/fill as presentation attributes,
-// which do NOT resolve CSS var(). Read tokens off the document at runtime and
-// re-read when the theme class flips.
-interface ChartTokens {
-  pos: string;
-  neg: string;
-  ink2: string;
-  ink3: string;
-  hairline: string;
-}
-const FALLBACK_TOKENS: ChartTokens = {
-  pos: "#217a52",
-  neg: "#a44a2a",
-  ink2: "#5b564a",
-  ink3: "#746c5d",
-  hairline: "#e2ddce",
-};
-
-function readTokens(): ChartTokens {
-  if (typeof window === "undefined") return FALLBACK_TOKENS;
-  const cs = getComputedStyle(document.documentElement);
-  const get = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
-  return {
-    pos: get("--chart-pos", FALLBACK_TOKENS.pos),
-    neg: get("--chart-neg", FALLBACK_TOKENS.neg),
-    ink2: get("--ink-2", FALLBACK_TOKENS.ink2),
-    ink3: get("--ink-3", FALLBACK_TOKENS.ink3),
-    hairline: get("--hairline", FALLBACK_TOKENS.hairline),
-  };
-}
-
-function compactINR(n: number) {
-  if (Math.abs(n) >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`;
-  if (Math.abs(n) >= 1_000) return `₹${(n / 1_000).toFixed(1)}k`;
-  return `₹${n}`;
-}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -103,16 +67,7 @@ export function TrendCard() {
   // The store holds 12 months (from /api/dashboard); the toggle just slices —
   // switching 6M/12M is instant, no refetch.
   const { trendPoints, hydrated } = useDashboardStore();
-  const [mounted, setMounted] = useState(false);
-  const [tokens, setTokens] = useState<ChartTokens>(FALLBACK_TOKENS);
-
-  useEffect(() => {
-    setMounted(true);
-    setTokens(readTokens());
-    const obs = new MutationObserver(() => setTokens(readTokens()));
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
+  const { tokens, mounted } = useChartTokens();
 
   const points = useMemo(() => trendPoints.slice(-range), [trendPoints, range]);
   const isLoading = !mounted || !hydrated;

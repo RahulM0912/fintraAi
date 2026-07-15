@@ -567,6 +567,12 @@ export const getReportToolDef = tool(
       year: z.number().optional().describe("Year, e.g. 2026 (scope 'month'/'year')"),
       month: z.number().min(1).max(12).optional().describe("Month 1-12 (scope 'month')"),
       purpose: purposeParam,
+      chart: z
+        .enum(["bar", "line", "area", "none"])
+        .optional()
+        .describe(
+          "How the app should chart this for the user: 'bar' for discrete periods, 'line' for a trend, 'area' for a cumulative feel, 'none' to skip the chart. Omit to let the app decide."
+        ),
     }),
   }
 );

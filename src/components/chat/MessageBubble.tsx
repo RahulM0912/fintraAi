@@ -3,8 +3,10 @@
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { MarkdownContent } from "@/components/common/MarkdownContent";
 import type { ActivityItem, InterruptResume, Message } from "@/lib/chat/types";
+import { getFollowUpSuggestions } from "@/lib/chat/followUpSuggestions";
 import { ActivityLog } from "./ActivityLog";
-import { DataTable } from "./DataTable";
+import { ChatArtifact } from "./ChatArtifact";
+import { FollowUpPrompts } from "./FollowUpPrompts";
 import { InterruptCard } from "./InterruptCard";
 
 /* Correspondence, not chat balloons: the agent speaks in flat prose on the
@@ -15,18 +17,22 @@ interface Props {
   message: Message;
   activityLog?: ActivityItem[];      // only used for the streaming bubble
   isLoading?: boolean;
+  isLast?: boolean;                  // gates the follow-up prompt row
   variant?: "compact" | "full";
   showToolsUsed?: boolean;
   onResolveInterrupt?: (resume: InterruptResume) => void;
+  onSuggestion?: (prompt: string, mode: "send" | "prefill") => void;
 }
 
 export function MessageBubble({
   message,
   activityLog = [],
   isLoading = false,
+  isLast = false,
   variant = "full",
   showToolsUsed = false,
   onResolveInterrupt,
+  onSuggestion,
 }: Props) {
   const isCompact = variant === "compact";
 
@@ -67,8 +73,39 @@ export function MessageBubble({
           <Loader2 className="h-4 w-4 animate-spin text-[var(--ink-3)]" />
         ) : null}
 
-        {/* Structured table from the render fast-path */}
-        {message.table && <DataTable table={message.table} />}
+        {/* Computed facts under the headline */}
+        {message.facts && message.facts.length > 0 && (
+          <div className="mt-1.5 space-y-0.5">
+            {message.facts.map((fact) => (
+              <p key={fact} className="tnum text-[13px] text-[var(--ink-2)]">
+                {fact}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Structured chart/table from the render fast-path — one artifact,
+            switchable between the two views when both exist. */}
+        {(message.chart || message.table) && (
+          <ChatArtifact chart={message.chart} table={message.table} compact={isCompact} />
+        )}
+
+        {/* Suggested next questions — only on the live turn, and only once
+            any pending confirmation is out of the way. AI-generated ones
+            (tied to the asked question) win; shape-derived ones are the
+            fallback when the cheap model was unavailable. */}
+        {isLast &&
+          !message.isStreaming &&
+          onSuggestion &&
+          (!message.interrupt || message.interruptResolved) &&
+          (() => {
+            const followUps = message.suggestions?.length
+              ? message.suggestions.map((s) => ({ prompt: s, mode: "send" as const }))
+              : getFollowUpSuggestions(message);
+            return followUps ? (
+              <FollowUpPrompts items={followUps} disabled={isLoading} onSelect={onSuggestion} />
+            ) : null;
+          })()}
 
         {/* HITL prompt — only after streaming completes */}
         {!message.isStreaming && message.interrupt && onResolveInterrupt && (

@@ -125,8 +125,10 @@ export function AiAssistant() {
                       message={msg}
                       activityLog={isLast ? chat.activityLog : []}
                       isLoading={chat.isLoading}
+                      isLast={isLast}
                       variant="compact"
                       onResolveInterrupt={chat.resumeInterrupt}
+                      onSuggestion={handleSuggestion}
                     />
                   );
                 })}
