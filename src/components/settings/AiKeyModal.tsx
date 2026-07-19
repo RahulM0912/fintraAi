@@ -97,7 +97,8 @@ export function AiKeyModal({ open, onOpenChange, onSaved, current }: Props) {
             <Label className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-3)]">
               Provider
             </Label>
-            <Popover open={providerOpen} onOpenChange={setProviderOpen}>
+            {/* modal: keeps touch scrolling alive inside the Dialog's scroll lock */}
+            <Popover open={providerOpen} onOpenChange={setProviderOpen} modal>
               <PopoverTrigger asChild>
                 <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-left hover:bg-muted/40 transition-colors">
                   <span>{provider.label}</span>
@@ -126,7 +127,7 @@ export function AiKeyModal({ open, onOpenChange, onSaved, current }: Props) {
             <Label className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-3)]">
               Model
             </Label>
-            <Popover open={modelOpen} onOpenChange={setModelOpen}>
+            <Popover open={modelOpen} onOpenChange={setModelOpen} modal>
               <PopoverTrigger asChild>
                 <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-left hover:bg-muted/40 transition-colors">
                   <span>{selectedModel?.label ?? "Select a model"}</span>
