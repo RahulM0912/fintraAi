@@ -144,7 +144,10 @@ export function MonthlyReportCard() {
   }
 
   return (
-    <section aria-label="Monthly category breakdown" className="border-t border-[var(--hairline)] pt-6">
+    <section
+      aria-label="Monthly category breakdown"
+      className="border-t border-[var(--hairline)] pt-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+    >
       <div className="mb-1 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
           Where it went
@@ -259,7 +262,9 @@ export function MonthlyReportCard() {
           : 'nothing recorded this month'}
       </p>
 
-      <ul className="mt-6 space-y-5">
+      {/* Mobile: fixed cap, a cut-off partial row is the scroll affordance.
+          Desktop: flexes to the rail's share so the columns end level. */}
+      <ul className="custom-scrollbar scroll-shade mt-6 max-h-[19rem] space-y-5 overflow-y-auto overscroll-y-contain pr-2 lg:max-h-none lg:min-h-0 lg:flex-1">
         {rows.map((category, i) => (
           <li key={category.name}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[13px]">
