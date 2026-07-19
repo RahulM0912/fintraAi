@@ -159,7 +159,8 @@ export function RecurringModal({ open, onOpenChange, onSaved, editing }: Props) 
             <Label className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-3)]">
               Category
             </Label>
-            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+            {/* modal: keeps touch scrolling alive inside the Dialog's scroll lock */}
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal>
               <PopoverTrigger asChild>
                 <button
                   disabled={isEdit}

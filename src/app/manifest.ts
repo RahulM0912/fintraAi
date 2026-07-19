@@ -6,6 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Fintra",
     description:
       "Tell Fintra what you spent. It logs it and shows you where your money goes.",
+    id: "/",
+    scope: "/",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#f7f4ec",

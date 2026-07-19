@@ -6,6 +6,7 @@ import { ProfileSection } from "@/components/settings/ProfileSection"
 import { RecurringSection } from "@/components/settings/RecurringSection"
 import { AiSettingsSection } from "@/components/settings/AiSettingsSection"
 import { DataSection } from "@/components/settings/DataSection"
+import { InstallSection } from "@/components/settings/InstallSection"
 import { LogOut } from "lucide-react"
 
 export default function SettingsPage() {
@@ -45,6 +46,9 @@ export default function SettingsPage() {
 
         {/* Data */}
         <DataSection />
+
+        {/* Install as app (PWA) */}
+        <InstallSection />
 
         {/* Sign out */}
         <div className="border-t border-[var(--hairline)] pt-6">
