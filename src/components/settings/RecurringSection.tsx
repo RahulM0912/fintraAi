@@ -138,13 +138,13 @@ export function RecurringSection() {
                 role="switch"
                 aria-checked={r.active}
                 aria-label="Toggle active"
-                className={`cursor-pointer relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                className={`cursor-pointer relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                   r.active ? "bg-[var(--brand)]" : "bg-[var(--surface-2)]"
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                    r.active ? "translate-x-4" : "translate-x-0.5"
+                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    r.active ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
