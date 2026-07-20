@@ -125,7 +125,8 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
             <Label className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-3)]">
               Applies to
             </Label>
-            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+            {/* modal: keeps touch scrolling alive inside the Dialog's scroll lock */}
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal>
               <PopoverTrigger asChild>
                 <button
                   disabled={isEdit}
@@ -180,7 +181,7 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 flex-row sm:justify-between">
+        <DialogFooter className="gap-2 sm:justify-between">
           {isEdit ? (
             <Button
               variant="ghost"
@@ -204,13 +205,18 @@ export function BudgetModal({ open, onOpenChange, onSaved, editing }: Props) {
             <span />
           )}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={busy}
+              className="flex-1 sm:flex-none"
+            >
               Cancel
             </Button>
             <Button
               onClick={save}
               disabled={busy}
-              className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
+              className="flex-1 sm:flex-none bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
             >
               {saving ? "Saving..." : isEdit ? "Save" : "Set budget"}
             </Button>

@@ -104,7 +104,9 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-5 pt-6 pb-10 sm:px-8 lg:pt-12 lg:pb-16">
+    // Mobile pb clears the chat FAB (bottom-24 + h-14) so the last row's
+    // actions stay reachable when scrolled to the end
+    <div className="mx-auto max-w-5xl px-5 pt-6 pb-24 sm:px-8 lg:pt-12 lg:pb-16">
       {/* Page title — mobile gets it from the app header; add via bottom-nav "+" */}
       <div className="hidden lg:flex items-end justify-between gap-4">
         <div>

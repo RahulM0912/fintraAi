@@ -206,6 +206,22 @@
   background: transparent;
 }
 
+/* ── Capped in-page lists ───────────────────────────────────── */
+/* Scroll shadows via background-attachment: local — the top/bottom
+   hint renders only while more content remains in that direction,
+   and vanishes when the list fits or is scrolled to its end. */
+.scroll-shade {
+  background-image:
+    linear-gradient(var(--app-bg) 33%, transparent),
+    linear-gradient(transparent, var(--app-bg) 66%),
+    radial-gradient(farthest-side at 50% 0, color-mix(in oklab, var(--ink) 18%, transparent), transparent),
+    radial-gradient(farthest-side at 50% 100%, color-mix(in oklab, var(--ink) 18%, transparent), transparent);
+  background-position: center top, center bottom, center top, center bottom;
+  background-size: 100% 36px, 100% 36px, 100% 12px, 100% 12px;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
 /* ── Accessibility: honor reduced-motion ────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

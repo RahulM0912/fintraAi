@@ -316,7 +316,10 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Transaction Date
               </Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              {/* modal: without it, the Dialog's scroll lock (react-remove-scroll)
+                  blocks touchmove on the body-portaled popover — list won't
+                  scroll on real touch devices */}
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-muted/40 transition-colors text-left">
                     <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -343,7 +346,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Category
             </Label>
-            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal>
               <PopoverTrigger asChild>
                 <button className="cursor-pointer flex items-center gap-2 w-full rounded-xl border border-input bg-background px-3 py-2 sm:py-2.5 text-sm hover:bg-muted/40 transition-colors text-left">
                   <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -373,12 +376,12 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           </div>
         </div>
 
-        <DialogFooter className="gap-2 pt-1 flex-row sm:flex-row">
+        <DialogFooter className="gap-2 pt-1">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
-            className="flex-1 sm:flex-none"
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
@@ -387,7 +390,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
               variant="ghost"
               onClick={() => handleCreate(true)}
               disabled={isLoading}
-              className="flex-1 sm:flex-none text-[var(--brand)] hover:text-[var(--brand-hover)]"
+              className="w-full sm:w-auto text-[var(--brand)] hover:text-[var(--brand-hover)]"
             >
               Save & add another
             </Button>
@@ -395,7 +398,7 @@ export function TransactionModal({ open, onOpenChange, type, onSuccess, transact
           <Button
             onClick={() => (isEditMode ? handleEdit() : handleCreate())}
             disabled={isLoading}
-            className="flex-1 sm:flex-none bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
+            className="w-full sm:w-auto bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white px-6"
           >
             {isLoading
               ? isEditMode ? "Saving..." : "Creating..."

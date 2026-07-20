@@ -56,9 +56,16 @@ export default function Dashboard() {
           <TrendCard />
           <RecentTransactionsCard />
         </div>
-        <div className="space-y-12">
-          <MonthlyReportCard />
-          <BudgetCard />
+        {/* Right rail. The absolute inner wrapper removes the rail from the
+            grid row's height computation, so the row is sized by the left
+            column alone and the rail's lists must scroll inside that height —
+            the rail can never run past Recent activity. Mobile keeps normal
+            flow with fixed list caps. */}
+        <div className="relative">
+          <div className="flex flex-col gap-12 lg:absolute lg:inset-0">
+            <MonthlyReportCard />
+            <BudgetCard />
+          </div>
         </div>
       </div>
     </div>

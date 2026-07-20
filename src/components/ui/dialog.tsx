@@ -85,7 +85,11 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn(
+        // Mobile: keep the (centered) title clear of the absolute close button
+        "flex flex-col gap-2 px-4 text-center sm:px-0 sm:text-left",
+        className
+      )}
       {...props}
     />
   )

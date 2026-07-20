@@ -30,7 +30,11 @@ export function BudgetCard() {
   const hasAny = !!data && (data.overall || data.items.length > 0)
 
   return (
-    <section id="budgets" aria-label="Budgets" className="scroll-mt-24 border-t border-[var(--hairline)] pt-6">
+    <section
+      id="budgets"
+      aria-label="Budgets"
+      className="scroll-mt-24 border-t border-[var(--hairline)] pt-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+    >
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-3)]">
           Budgets
@@ -63,7 +67,9 @@ export function BudgetCard() {
           </button>
         </div>
       ) : (
-        <ul className="space-y-1">
+        // The ul owns the -mx-2 bleed: a negative margin on rows would
+        // horizontally overflow the scroll container
+        <ul className="custom-scrollbar scroll-shade -mx-2 max-h-[23rem] space-y-1 overflow-y-auto overscroll-y-contain px-2 lg:max-h-none lg:min-h-0 lg:flex-1">
           {data!.overall && (
             <BudgetRow
               label="All spending"
@@ -120,7 +126,7 @@ function BudgetRow({
     <li>
       <button
         onClick={onClick}
-        className="cursor-pointer w-full rounded-lg px-2 py-3 text-left transition-colors duration-150 ease-out hover:bg-[var(--surface-2)] -mx-2"
+        className="cursor-pointer w-full rounded-lg px-2 py-3 text-left transition-colors duration-150 ease-out hover:bg-[var(--surface-2)]"
       >
         <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[13px]">
           <span className="truncate font-medium text-[var(--ink)]">{label}</span>
