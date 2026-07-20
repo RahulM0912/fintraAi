@@ -242,7 +242,7 @@ function MdTable({
   return (
     <div className="my-3 overflow-x-auto rounded-lg border border-border">
       <table className="w-full border-collapse text-xs">
-        <thead className="bg-background/60">
+        <thead className="border-b border-border bg-background/60">
           <tr>
             {headers.map((h, j) => (
               <th

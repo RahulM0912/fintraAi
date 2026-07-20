@@ -34,8 +34,12 @@ export async function summarizeHistory(
 ): Promise<string> {
   if (newMessages.length === 0) return priorSummary;
 
+  // Summarising a chat tail is trivial work — pin it to a cheap small model on
+  // the managed key instead of the (possibly premium) chat model (Phase E).
   const provider = opts?.provider ?? DEFAULT_MODEL_CONFIG.provider;
-  const modelName = opts?.modelName ?? DEFAULT_MODEL_CONFIG.modelName;
+  const modelName =
+    opts?.modelName ??
+    (provider === "openrouter" ? "openai/gpt-oss-20b" : DEFAULT_MODEL_CONFIG.modelName);
   const model = createModel(provider, modelName);
 
   const transcript = newMessages

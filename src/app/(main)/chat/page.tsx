@@ -6,10 +6,10 @@ import { useChat } from "@/lib/chat/useChat";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
 import { ChatInput, type ChatInputHandle } from "@/components/chat/ChatInput";
-import { PAGE_SUGGESTIONS, PAGE_WELCOME } from "@/components/chat/suggestions";
+import { PAGE_SUGGESTIONS, CHAT_WELCOME } from "@/components/chat/suggestions";
 
 export default function ChatPage() {
-  const chat = useChat({ welcomeMessage: PAGE_WELCOME, trackUsage: true });
+  const chat = useChat({ trackUsage: true, sessionKey: "main" });
   const [input, setInput] = useState("");
   const inputRef = useRef<ChatInputHandle>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -26,13 +26,22 @@ export default function ChatPage() {
     await chat.send(value);
   };
 
+  const handleSuggestion = (prompt: string, mode: "send" | "prefill") => {
+    if (mode === "prefill") {
+      setInput(prompt);
+      inputRef.current?.focus();
+      return;
+    }
+    void handleSend(prompt);
+  };
+
   const handleReset = () => {
     chat.reset();
     setInput("");
     inputRef.current?.resetHeight();
   };
 
-  const showSuggestions = chat.messages.length <= 1;
+  const showSuggestions = chat.messages.length === 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -66,6 +75,8 @@ export default function ChatPage() {
 
       <div className="flex-1 overflow-y-auto px-5 py-8 sm:px-8">
         <div className="mx-auto flex max-w-3xl flex-col gap-8">
+          {/* Static welcome — UI chrome, not part of the shared session */}
+          <MessageBubble message={CHAT_WELCOME} />
           {chat.messages.map((msg, i) => {
             const isLast = i === chat.messages.length - 1;
             return (
@@ -74,8 +85,9 @@ export default function ChatPage() {
                 message={msg}
                 activityLog={isLast ? chat.activityLog : []}
                 isLoading={chat.isLoading}
-                showToolsUsed
+                isLast={isLast}
                 onResolveInterrupt={chat.resumeInterrupt}
+                onSuggestion={handleSuggestion}
               />
             );
           })}
@@ -93,7 +105,7 @@ export default function ChatPage() {
               suggestions={PAGE_SUGGESTIONS}
               variant="card"
               disabled={chat.isLoading}
-              onSelect={handleSend}
+              onSelect={handleSuggestion}
             />
           </div>
         </div>
@@ -105,6 +117,7 @@ export default function ChatPage() {
           value={input}
           onChange={setInput}
           onSend={() => handleSend()}
+          onStop={chat.cancel}
           isLoading={chat.isLoading}
           placeholder="Ask about your money… (Enter to send, Shift+Enter for a new line)"
         />

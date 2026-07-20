@@ -24,11 +24,46 @@ export type {
 
 // ─── Chat-domain types (client) ────────────────────────────────────────────────
 
+// Structured table payload rendered natively (mirror of server render.ts).
+export interface DataTablePayload {
+  title: string;
+  columns: string[];
+  rows: (string | number)[][];
+}
+
+// Structured chart payload (mirror of server render.ts) — data only, the
+// client owns colors and marks. `style` is the model's presentation pick
+// (validated server-side); `title` is the card's eyebrow label.
+export type ChartStyle = "bar" | "line" | "area";
+
+export type ChartPayload =
+  | {
+      kind: "series";
+      unit: "day" | "month";
+      style: ChartStyle;
+      title: string;
+      points: { label: string; income: number; expense: number }[];
+    }
+  | {
+      kind: "shares";
+      title: string;
+      items: { name: string; amount: number; pct: number }[];
+    }
+  | {
+      kind: "progress";
+      title: string;
+      items: { name: string; cap: number; spent: number; pct: number }[];
+    };
+
 export interface Message {
   role: "user" | "ai";
   content: string;
   isStreaming?: boolean;
   toolsUsed?: string[];
+  table?: DataTablePayload;           // structured table from the render fast-path
+  chart?: ChartPayload;               // structured chart from the render fast-path
+  facts?: string[];                   // short computed facts under the headline
+  suggestions?: string[];             // AI-generated follow-up questions
   interrupt?: InterruptPayload;       // pending HITL prompt attached to the bubble
   interruptResolved?: boolean;        // user already answered this prompt
 }
@@ -43,11 +78,13 @@ export interface ActivityItem {
 
 export type SSEEvent =
   | { type: "token"; content: string }
+  | { type: "data"; table?: DataTablePayload; chart?: ChartPayload; facts?: string[] }
   | { type: "tool_start"; tool: string }
   | { type: "tool_end"; tool: string }
   | { type: "status"; step: string; label: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; cost: number }
   | { type: "summary"; summary: string; summarizedCount: number }
+  | { type: "suggestions"; items: string[] }
   | { type: "interrupt"; threadId: string; payload: InterruptPayload }
   | { type: "done" }
   | { type: "error"; message: string };
@@ -55,16 +92,11 @@ export type SSEEvent =
 // ─── Shared display constants ──────────────────────────────────────────────────
 
 export const TOOL_STATUS_LABELS: Record<string, string> = {
-  add_transaction: "Adding transaction...",
-  add_transactions_bulk: "Adding transactions...",
+  add_transactions: "Adding transactions...",
   list_transactions: "Fetching transactions...",
-  update_transaction: "Updating transaction...",
-  delete_transaction: "Deleting transaction...",
-  get_spending_summary: "Analyzing spending...",
-  get_categories: "Loading categories...",
-  get_history: "Fetching history...",
-  set_budget: "Updating budget...",
-  get_budget_status: "Checking budgets...",
+  edit_transaction: "Editing transaction...",
+  get_report: "Analyzing spending...",
+  budget: "Working on budgets...",
   create_recurring_transaction: "Scheduling recurring...",
   request_transaction_selection: "Waiting for your selection...",
   request_destructive_confirmation: "Waiting for your confirmation...",
@@ -72,11 +104,9 @@ export const TOOL_STATUS_LABELS: Record<string, string> = {
 };
 
 export const MUTATING_TOOLS = new Set([
-  "add_transaction",
-  "add_transactions_bulk",
-  "update_transaction",
-  "delete_transaction",
-  "set_budget",
+  "add_transactions",
+  "edit_transaction",
+  "budget",
 ]);
 
 export interface UsageInfo {

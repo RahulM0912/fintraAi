@@ -10,6 +10,16 @@ import { lastDueOnOrBefore, nextDueAfter, ordinal } from "@/lib/recurring";
 type DbClient = ReturnType<typeof createAdminClient>;
 type TransactionType = "income" | "expense";
 
+// Shared param for read tools: "display" opts into the deterministic render
+// fast-path (the app shows the result as a table, no follow-up LLM call);
+// anything else routes the result back to the agent. See graph.ts afterTools.
+const purposeParam = z
+  .enum(["display", "lookup"])
+  .optional()
+  .describe(
+    "'display' when the user just wants to see this data (the app renders it as a table automatically and your turn ends); 'lookup' when you need the data for analysis, advice, or a follow-up action"
+  );
+
 // ─── Shared DB helpers (mirrors logic in existing API routes) ──────────────────
 
 function parseDateParts(dateStr: string) {
@@ -161,9 +171,9 @@ export const getCategoriesToolDef = tool(
   }
 );
 
-// ─── Tool: add_transaction ─────────────────────────────────────────────────────
+// ─── Tool: add_transactions (single + bulk merged, Phase D) ─────────────────────
 
-const addTransactionSchema = z.object({
+const txItemSchema = z.object({
   amount: z.number().min(1).describe("Amount in rupees (₹)"),
   type: z.enum(["income", "expense"]),
   categoryName: z
@@ -171,102 +181,36 @@ const addTransactionSchema = z.object({
     .describe("Category name e.g. Food, Travel, Salary. Will be fuzzy-matched."),
   date: z
     .string()
-    .describe(
-      "Date as YYYY-MM-DD. Convert relative dates (today, yesterday, last Monday) to absolute."
-    ),
+    .describe("Date as YYYY-MM-DD. Convert relative dates to absolute."),
   description: z.string().optional().describe("Optional note or description"),
 });
 
-export const addTransactionToolDef = tool(
+export const addTransactionsToolDef = tool(
   async (
-    input: z.infer<typeof addTransactionSchema>,
+    { transactions }: { transactions: z.infer<typeof txItemSchema>[] },
     config?: RunnableConfig
   ): Promise<string> => {
     const userId = (config as any)?.configurable?.userId as string | undefined;
     if (!userId) return "Error: Not authenticated";
 
     const db = createAdminClient();
-    const category = await resolveCategoryId(db, input.categoryName, input.type);
-
-    if (!category) {
-      const { data: cats } = await db
-        .from("categories")
-        .select("name")
-        .eq("type", input.type);
-      const available = cats?.map((c) => c.name).join(", ") ?? "none";
-      return `Category "${input.categoryName}" not found for ${input.type}. Available: ${available}`;
-    }
-
-    const { data: tx, error } = await db
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        category_id: category.id,
-        amount: Number(input.amount),
-        type: input.type,
-        date: input.date,
-        description: input.description ?? null,
-      })
-      .select("id")
-      .single();
-
-    if (error) return `Error: ${error.message}`;
-
-    const { day, month, year } = parseDateParts(input.date);
-    await Promise.all([
-      upsertMonthHistory(db, userId, day, month, year, input.type, input.amount),
-      upsertYearHistory(db, userId, month, year, input.type, input.amount),
-    ]);
-
-    return JSON.stringify({
-      success: true,
-      id: tx.id,
-      message: `Added ${input.type} of ₹${input.amount} in ${category.name} on ${input.date}${input.description ? ` — "${input.description}"` : ""}`,
-    });
-  },
-  {
-    name: "add_transaction",
-    description:
-      "Add a single income or expense transaction. For multiple transactions call this tool in parallel.",
-    schema: addTransactionSchema,
-  }
-);
-
-// ─── Tool: add_transactions_bulk ───────────────────────────────────────────────
-
-const bulkItemSchema = z.object({
-  amount: z.number().min(1),
-  type: z.enum(["income", "expense"]),
-  categoryName: z.string(),
-  date: z.string().describe("YYYY-MM-DD"),
-  description: z.string().optional(),
-});
-
-export const addTransactionsBulkToolDef = tool(
-  async (
-    { transactions }: { transactions: z.infer<typeof bulkItemSchema>[] },
-    config?: RunnableConfig
-  ): Promise<string> => {
-    const userId = (config as any)?.configurable?.userId as string | undefined;
-    if (!userId) return "Error: Not authenticated";
-
-    const db = createAdminClient();
-    const results: { amount: number; category: string; status: string; error?: string }[] =
-      [];
+    const messages: string[] = [];
+    const errors: string[] = [];
 
     for (const tx of transactions) {
       const category = await resolveCategoryId(db, tx.categoryName, tx.type);
       if (!category) {
-        results.push({
-          amount: tx.amount,
-          category: tx.categoryName,
-          status: "failed",
-          error: "Category not found",
-        });
+        const { data: cats } = await db
+          .from("categories")
+          .select("name")
+          .eq("type", tx.type);
+        errors.push(
+          `Category "${tx.categoryName}" not found for ${tx.type}. Available: ${cats?.map((c) => c.name).join(", ") ?? "none"}`
+        );
         continue;
       }
 
-      const { data: inserted, error } = await db
+      const { error } = await db
         .from("transactions")
         .insert({
           user_id: userId,
@@ -280,7 +224,7 @@ export const addTransactionsBulkToolDef = tool(
         .single();
 
       if (error) {
-        results.push({ amount: tx.amount, category: category.name, status: "failed", error: error.message });
+        errors.push(`₹${tx.amount} ${category.name}: ${error.message}`);
         continue;
       }
 
@@ -290,23 +234,28 @@ export const addTransactionsBulkToolDef = tool(
         upsertYearHistory(db, userId, month, year, tx.type, tx.amount),
       ]);
 
-      results.push({ amount: tx.amount, category: category.name, status: "added" });
+      messages.push(
+        `Added ${tx.type} of ₹${tx.amount} in ${category.name} on ${tx.date}${tx.description ? ` — "${tx.description}"` : ""}`
+      );
     }
 
-    const added = results.filter((r) => r.status === "added").length;
-    const failed = results.filter((r) => r.status === "failed").length;
-
-    return JSON.stringify({ added, failed, results });
+    return JSON.stringify({
+      added: messages.length,
+      failed: errors.length,
+      messages,
+      ...(errors.length ? { errors } : {}),
+    });
   },
   {
-    name: "add_transactions_bulk",
+    name: "add_transactions",
     description:
-      "Add 3 or more transactions at once from a list the user provides. More efficient than multiple single calls.",
+      "Add one or more income/expense transactions in a single call. Always pass the full list — never call this multiple times in one turn.",
     schema: z.object({
       transactions: z
-        .array(bulkItemSchema)
-        .min(2)
-        .describe("List of transactions to add"),
+        .array(txItemSchema)
+        .min(1)
+        .max(20)
+        .describe("Transactions to add (1-20)"),
     }),
   }
 );
@@ -366,7 +315,9 @@ export const listTransactionsToolDef = tool(
         type: t.type,
         amount: Number(t.amount),
         category: cat?.name ?? "Unknown",
-        description: t.description ?? null,
+        // Omit empty notes entirely — null keys are pure token noise on the
+        // lookup path where the model re-reads this result.
+        ...(t.description ? { description: t.description as string } : {}),
       };
     });
 
@@ -382,15 +333,17 @@ export const listTransactionsToolDef = tool(
       type: z.enum(["income", "expense"]).optional(),
       categoryName: z.string().optional().describe("Filter by category name"),
       limit: z.number().optional().default(10).describe("Max results, default 10"),
+      purpose: purposeParam,
     }),
   }
 );
 
 // ─── Tool: update_transaction ──────────────────────────────────────────────────
 
-export const updateTransactionToolDef = tool(
+export const editTransactionToolDef = tool(
   async (
     {
+      action,
       id,
       amount,
       type,
@@ -398,6 +351,7 @@ export const updateTransactionToolDef = tool(
       date,
       description,
     }: {
+      action: "update" | "delete";
       id: string;
       amount?: number;
       type?: TransactionType;
@@ -412,9 +366,46 @@ export const updateTransactionToolDef = tool(
 
     const db = createAdminClient();
 
+    if (action === "delete") {
+      const { data: tx, error: fetchErr } = await db
+        .from("transactions")
+        .select("amount, type, date, categories(name)")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single();
+
+      if (fetchErr || !tx) return "Error: Transaction not found";
+
+      const { error: deleteErr } = await db
+        .from("transactions")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteErr) return `Error: ${deleteErr.message}`;
+
+      const { day, month, year } = parseDateParts(tx.date);
+      await Promise.all([
+        upsertMonthHistory(db, userId, day, month, year, tx.type as TransactionType, -Number(tx.amount)),
+        upsertYearHistory(db, userId, month, year, tx.type as TransactionType, -Number(tx.amount)),
+      ]);
+
+      const catName =
+        tx.categories && !Array.isArray(tx.categories)
+          ? (tx.categories as any).name
+          : Array.isArray(tx.categories)
+          ? (tx.categories[0] as any)?.name
+          : "Unknown";
+
+      return JSON.stringify({
+        success: true,
+        message: `Deleted ${tx.type} of ₹${tx.amount} (${catName}) on ${tx.date}`,
+      });
+    }
+
     const { data: old, error: fetchErr } = await db
       .from("transactions")
-      .select("amount, type, date, category_id")
+      .select("amount, type, date, category_id, description")
       .eq("id", id)
       .eq("user_id", userId)
       .single();
@@ -446,7 +437,9 @@ export const updateTransactionToolDef = tool(
         type: newType,
         date: newDate,
         category_id: newCategoryId,
-        description: description ?? null,
+        // Only touch the note when the model explicitly provided one —
+        // updating the amount must not wipe an existing description.
+        description: description !== undefined ? description : old.description,
       })
       .eq("id", id)
       .eq("user_id", userId);
@@ -470,10 +463,11 @@ export const updateTransactionToolDef = tool(
     return JSON.stringify({ success: true, message: "Transaction updated successfully" });
   },
   {
-    name: "update_transaction",
+    name: "edit_transaction",
     description:
-      "Update an existing transaction by its ID. Use list_transactions first to get the ID. Only provide fields you want to change.",
+      "Update or permanently delete an existing transaction by its ID. Use list_transactions first to get the ID. For update, only provide the fields you want to change. Always confirm with the user (request_destructive_confirmation) before action 'delete'.",
     schema: z.object({
+      action: z.enum(["update", "delete"]),
       id: z.string().describe("Transaction ID from list_transactions"),
       amount: z.number().min(1).optional(),
       type: z.enum(["income", "expense"]).optional(),
@@ -484,72 +478,32 @@ export const updateTransactionToolDef = tool(
   }
 );
 
-// ─── Tool: delete_transaction ──────────────────────────────────────────────────
+// ─── Tool: get_report (spending summary + history merged, Phase D) ──────────────
 
-export const deleteTransactionToolDef = tool(
+export const getReportToolDef = tool(
   async (
-    { id }: { id: string },
+    {
+      scope,
+      startDate,
+      endDate,
+      year,
+      month,
+    }: {
+      scope: "range" | "month" | "year";
+      startDate?: string;
+      endDate?: string;
+      year?: number;
+      month?: number;
+      purpose?: "display" | "lookup";
+    },
     config?: RunnableConfig
   ): Promise<string> => {
     const userId = (config as any)?.configurable?.userId as string | undefined;
     if (!userId) return "Error: Not authenticated";
 
-    const db = createAdminClient();
-
-    const { data: tx, error: fetchErr } = await db
-      .from("transactions")
-      .select("amount, type, date, categories(name)")
-      .eq("id", id)
-      .eq("user_id", userId)
-      .single();
-
-    if (fetchErr || !tx) return "Error: Transaction not found";
-
-    const { error: deleteErr } = await db
-      .from("transactions")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
-
-    if (deleteErr) return `Error: ${deleteErr.message}`;
-
-    const { day, month, year } = parseDateParts(tx.date);
-    await Promise.all([
-      upsertMonthHistory(db, userId, day, month, year, tx.type as TransactionType, -Number(tx.amount)),
-      upsertYearHistory(db, userId, month, year, tx.type as TransactionType, -Number(tx.amount)),
-    ]);
-
-    const catName =
-      tx.categories && !Array.isArray(tx.categories)
-        ? (tx.categories as any).name
-        : Array.isArray(tx.categories)
-        ? (tx.categories[0] as any)?.name
-        : "Unknown";
-
-    return JSON.stringify({
-      success: true,
-      message: `Deleted ${tx.type} of ₹${tx.amount} (${catName}) on ${tx.date}`,
-    });
-  },
-  {
-    name: "delete_transaction",
-    description:
-      "Permanently delete a transaction by its ID. Always confirm with the user before calling this. Use list_transactions first to get the ID.",
-    schema: z.object({
-      id: z.string().describe("Transaction ID to delete"),
-    }),
-  }
-);
-
-// ─── Tool: get_spending_summary ────────────────────────────────────────────────
-
-export const getSpendingSummaryToolDef = tool(
-  async (
-    { startDate, endDate }: { startDate: string; endDate: string },
-    config?: RunnableConfig
-  ): Promise<string> => {
-    const userId = (config as any)?.configurable?.userId as string | undefined;
-    if (!userId) return "Error: Not authenticated";
+    if (scope !== "range") return getHistoryReport(userId, scope, year, month);
+    if (!startDate || !endDate)
+      return "Error: startDate and endDate are required when scope is 'range'";
 
     const db = createAdminClient();
     const { data: transactions, error } = await db
@@ -589,6 +543,7 @@ export const getSpendingSummaryToolDef = tool(
     };
 
     return JSON.stringify({
+      scope: "range",
       period: `${startDate} to ${endDate}`,
       totalIncome,
       totalExpense,
@@ -602,29 +557,38 @@ export const getSpendingSummaryToolDef = tool(
     });
   },
   {
-    name: "get_spending_summary",
+    name: "get_report",
     description:
-      "Get a full spending summary with income/expense totals and category breakdown for a date range.",
+      "Spending report. scope 'range' = income/expense totals + category breakdown between startDate and endDate; scope 'month' = daily breakdown for one month (needs year + month); scope 'year' = monthly breakdown (needs year).",
     schema: z.object({
-      startDate: z.string().describe("Start date YYYY-MM-DD"),
-      endDate: z.string().describe("End date YYYY-MM-DD"),
+      scope: z.enum(["range", "month", "year"]),
+      startDate: z.string().optional().describe("Start date YYYY-MM-DD (scope 'range')"),
+      endDate: z.string().optional().describe("End date YYYY-MM-DD (scope 'range')"),
+      year: z.number().optional().describe("Year, e.g. 2026 (scope 'month'/'year')"),
+      month: z.number().min(1).max(12).optional().describe("Month 1-12 (scope 'month')"),
+      purpose: purposeParam,
+      chart: z
+        .enum(["bar", "line", "area", "none"])
+        .optional()
+        .describe(
+          "How the app should chart this for the user: 'bar' for discrete periods, 'line' for a trend, 'area' for a cumulative feel, 'none' to skip the chart. Omit to let the app decide."
+        ),
     }),
   }
 );
 
-// ─── Tool: get_history (merged month + year) ───────────────────────────────────
+// History branch of get_report (daily/monthly rollups from the history tables).
+async function getHistoryReport(
+  userId: string,
+  scope: "month" | "year",
+  year?: number,
+  month?: number
+): Promise<string> {
+  if (!year) return "Error: year is required when scope is 'month' or 'year'";
 
-export const getHistoryToolDef = tool(
-  async (
-    { scope, year, month }: { scope: "month" | "year"; year: number; month?: number },
-    config?: RunnableConfig
-  ): Promise<string> => {
-    const userId = (config as any)?.configurable?.userId as string | undefined;
-    if (!userId) return "Error: Not authenticated";
+  const db = createAdminClient();
 
-    const db = createAdminClient();
-
-    if (scope === "month") {
+  if (scope === "month") {
       if (!month) return "Error: month is required when scope is 'month'";
       const { data, error } = await db
         .from("month_history")
@@ -688,25 +652,7 @@ export const getHistoryToolDef = tool(
       worstMonth,
       months,
     });
-  },
-  {
-    name: "get_history",
-    description:
-      "Get income/expense history. scope='month' returns a daily breakdown for one month (requires month); scope='year' returns a monthly breakdown for the whole year. Useful for trend analysis.",
-    schema: z.object({
-      scope: z
-        .enum(["month", "year"])
-        .describe("'month' for daily breakdown, 'year' for monthly breakdown"),
-      year: z.number().describe("Year e.g. 2024"),
-      month: z
-        .number()
-        .min(1)
-        .max(12)
-        .optional()
-        .describe("Month 1-12, required when scope is 'month'"),
-    }),
-  }
-);
+}
 
 // ─── Budget helpers ────────────────────────────────────────────────────────────
 
@@ -722,16 +668,29 @@ function currentMonthBounds() {
   };
 }
 
-// ─── Tool: set_budget ──────────────────────────────────────────────────────────
+// ─── Tool: budget (set + status merged, Phase D) ────────────────────────────────
 
-export const setBudgetToolDef = tool(
+export const budgetToolDef = tool(
   async (
-    { categoryName, amount }: { categoryName?: string; amount: number },
+    {
+      action,
+      categoryName,
+      amount,
+    }: {
+      action: "set" | "status";
+      categoryName?: string;
+      amount?: number;
+      purpose?: "display" | "lookup";
+    },
     config?: RunnableConfig
   ): Promise<string> => {
     const userId = (config as any)?.configurable?.userId as string | undefined;
     if (!userId) return "Error: Not authenticated";
-    if (!amount || amount <= 0) return "Error: amount must be greater than 0";
+
+    if (action === "status") return getBudgetStatusReport(userId);
+
+    if (!amount || amount <= 0)
+      return "Error: amount must be greater than 0 when action is 'set'";
 
     const db = createAdminClient();
 
@@ -775,26 +734,28 @@ export const setBudgetToolDef = tool(
     });
   },
   {
-    name: "set_budget",
+    name: "budget",
     description:
-      "Set or update a monthly spending budget. Omit categoryName for an overall (all-spending) budget, or pass an expense category name for a per-category budget.",
+      "Monthly budgets. action 'set' creates/updates a cap (amount required; omit categoryName for an overall budget). action 'status' reports each budget's amount, spent, remaining, and percentage used this month.",
     schema: z.object({
+      action: z.enum(["set", "status"]),
       categoryName: z
         .string()
         .optional()
-        .describe("Expense category name, or omit for an overall budget"),
-      amount: z.number().min(1).describe("Monthly budget amount in rupees (₹)"),
+        .describe("Expense category name, or omit for an overall budget (action 'set')"),
+      amount: z
+        .number()
+        .min(1)
+        .optional()
+        .describe("Monthly budget amount in rupees (₹), required for action 'set'"),
+      purpose: purposeParam,
     }),
   }
 );
 
-// ─── Tool: get_budget_status ───────────────────────────────────────────────────
-
-export const getBudgetStatusToolDef = tool(
-  async (_args: Record<string, never>, config?: RunnableConfig): Promise<string> => {
-    const userId = (config as any)?.configurable?.userId as string | undefined;
-    if (!userId) return "Error: Not authenticated";
-
+// Status branch of the budget tool.
+async function getBudgetStatusReport(userId: string): Promise<string> {
+  {
     const db = createAdminClient();
     const { start, end, label } = currentMonthBounds();
 
@@ -857,14 +818,8 @@ export const getBudgetStatusToolDef = tool(
     categories.sort((a, b) => (b.percentage as number) - (a.percentage as number));
 
     return JSON.stringify({ month: label, hasBudgets: true, overall, categories });
-  },
-  {
-    name: "get_budget_status",
-    description:
-      "Get the user's current-month budget status: each budget with amount, spent, remaining, and percentage used. Call when the user asks about budgets, limits, or how much they can still spend.",
-    schema: z.object({}),
   }
-);
+}
 
 // ─── Tool: create_recurring_transaction ────────────────────────────────────────
 
@@ -938,26 +893,20 @@ export const createRecurringTransactionToolDef = tool(
 
 export const financeTools = [
   // get_categories intentionally omitted from the bound set — the full category
-  // list is injected into the system prompt, and add/update return the available
+  // list is injected into the system prompt, and add/edit return the available
   // list on a bad name. Keeping it unbound saves a tool schema on every call.
-  addTransactionToolDef,
-  addTransactionsBulkToolDef,
+  addTransactionsToolDef,
   listTransactionsToolDef,
-  updateTransactionToolDef,
-  deleteTransactionToolDef,
-  getSpendingSummaryToolDef,
-  getHistoryToolDef,
-  setBudgetToolDef,
-  getBudgetStatusToolDef,
+  editTransactionToolDef,
+  getReportToolDef,
+  budgetToolDef,
   createRecurringTransactionToolDef,
   ...hitlTools,
 ];
 
 // Tools that mutate data — used by the frontend to trigger a dashboard refresh
 export const MUTATING_TOOL_NAMES = new Set([
-  "add_transaction",
-  "add_transactions_bulk",
-  "update_transaction",
-  "delete_transaction",
-  "set_budget",
+  "add_transactions",
+  "edit_transaction",
+  "budget",
 ]);

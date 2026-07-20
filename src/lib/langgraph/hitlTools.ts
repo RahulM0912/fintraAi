@@ -149,7 +149,7 @@ export const requestLargeAmountConfirmationToolDef = tool(
   {
     name: "request_large_amount_confirmation",
     description:
-      "Use before adding a transaction of ₹10,000 or more, or when an amount looks like a possible typo. Returns {approved: true|false}. Do not call add_transaction if approved is false.",
+      "Use before adding a transaction of ₹10,000 or more, or when an amount looks like a possible typo. Returns {approved: true|false}. Do not add that transaction if approved is false.",
     schema: z.object({
       amount: z.number().min(1),
       type: z.enum(["income", "expense"]),

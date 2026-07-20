@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { newThreadId } from "./threadId";
 import { parseSSE } from "./sseParser";
+import { stripHarmonyLeak } from "./harmony";
 import { useActivityLog } from "./useActivityLog";
 import type {
+  ChartPayload,
+  DataTablePayload,
   InterruptPayload,
   InterruptResume,
   Message,
@@ -15,8 +18,35 @@ import type {
 import { MUTATING_TOOLS, TOOL_STATUS_LABELS } from "./types";
 
 interface UseChatOptions {
-  welcomeMessage: Message;
   trackUsage?: boolean;
+  /** Chats with the same key share one in-memory session that survives route
+   *  changes (cleared on page reload or "New chat"). */
+  sessionKey?: string;
+}
+
+// ─── In-memory session cache ────────────────────────────────────────────────────
+// Module-level so the conversation survives navigating between app tabs within
+// one browser session. Intentionally NOT sessionStorage: memory only, gone on
+// reload, nothing persisted to disk.
+
+interface ChatSession {
+  messages: Message[];
+  summary: string;
+  summarizedCount: number;
+  threadId: string;
+  lastUsage: UsageInfo | null;
+}
+
+const sessionCache = new Map<string, ChatSession>();
+
+// A restored transcript must not contain half-streamed bubbles: finalize any
+// streaming flag and drop empty AI placeholders left by an aborted stream.
+function restoreMessages(cached: Message[] | undefined): Message[] | null {
+  if (!cached?.length) return null;
+  const cleaned = cached
+    .map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
+    .filter((m) => m.role === "user" || m.content || m.table || m.chart || m.interrupt);
+  return cleaned.length ? cleaned : null;
 }
 
 interface ChatRequestBody {
@@ -32,31 +62,72 @@ interface StreamCtx {
   mutated: boolean;
   interrupt: InterruptPayload | null;
   tools: string[];
+  table: DataTablePayload | null;
+  chart: ChartPayload | null;
+  facts: string[] | null;
+  suggestions: string[] | null;
 }
 
-export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) {
-  const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
+// The welcome message is UI chrome each surface renders itself — it is NOT
+// part of the session, so it's never re-sent to the API and each surface can
+// show a different one (long on /chat, short in the widget).
+export function useChat({ trackUsage = false, sessionKey = "default" }: UseChatOptions = {}) {
+  const cached = sessionCache.get(sessionKey);
+  const [messages, setMessages] = useState<Message[]>(
+    () => restoreMessages(cached?.messages) ?? []
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null);
+  const [lastUsage, setLastUsage] = useState<UsageInfo | null>(cached?.lastUsage ?? null);
   const activity = useActivityLog();
 
-  const threadIdRef = useRef<string>(newThreadId());
+  const threadIdRef = useRef<string>(cached?.threadId ?? newThreadId());
   const abortRef = useRef<AbortController | null>(null);
 
   // Rolling-summary memory: everything before `summarizedCountRef` messages is
   // condensed into `summaryRef`; only the unsummarised tail is sent each turn.
-  const summaryRef = useRef<string>("");
-  const summarizedCountRef = useRef<number>(0);
+  const summaryRef = useRef<string>(cached?.summary ?? "");
+  const summarizedCountRef = useRef<number>(cached?.summarizedCount ?? 0);
+
+  // Keep the session cache current so the conversation survives tab switches.
+  useEffect(() => {
+    sessionCache.set(sessionKey, {
+      messages,
+      summary: summaryRef.current,
+      summarizedCount: summarizedCountRef.current,
+      threadId: threadIdRef.current,
+      lastUsage,
+    });
+  }, [sessionKey, messages, lastUsage]);
+
+  // Abandoning the surface mid-stream (navigation/unmount) aborts the request;
+  // the cached transcript is finalized by restoreMessages on the next mount.
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
 
   const handleEvent = useCallback(
     (event: SSEEvent, ctx: StreamCtx) => {
       if (event.type === "token") {
         if (!ctx.content) activity.markAllDone();
         ctx.content += event.content;
+        // Display (and later store) only the leak-free text; while a Harmony
+        // reasoning leak is mid-stream this is "" and the bubble keeps its
+        // spinner instead of showing chain-of-thought.
         setMessages((prev) => [
           ...prev.slice(0, -1),
-          { role: "ai", content: ctx.content, isStreaming: true },
+          {
+            role: "ai",
+            content: stripHarmonyLeak(ctx.content),
+            table: ctx.table ?? undefined,
+            chart: ctx.chart ?? undefined,
+            facts: ctx.facts ?? undefined,
+            isStreaming: true,
+          },
         ]);
+      } else if (event.type === "data") {
+        ctx.table = event.table ?? ctx.table;
+        ctx.chart = event.chart ?? ctx.chart;
+        ctx.facts = event.facts ?? ctx.facts;
       } else if (event.type === "status") {
         activity.upsert(event.step, event.label, "active");
       } else if (event.type === "tool_start") {
@@ -78,12 +149,22 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
       } else if (event.type === "summary") {
         summaryRef.current = event.summary;
         summarizedCountRef.current = event.summarizedCount;
+      } else if (event.type === "suggestions") {
+        ctx.suggestions = event.items;
       } else if (event.type === "done") {
+        // Stored content is the stripped text — it's what gets re-sent as
+        // history, and leaked reasoning in history derails the next turn.
+        // If stripping leaves nothing (leak never reached "assistantfinal"),
+        // fall back to the raw text over an empty bubble.
         setMessages((prev) => [
           ...prev.slice(0, -1),
           {
             role: "ai",
-            content: ctx.content,
+            content: stripHarmonyLeak(ctx.content) || ctx.content,
+            table: ctx.table ?? undefined,
+            chart: ctx.chart ?? undefined,
+            facts: ctx.facts ?? undefined,
+            suggestions: ctx.suggestions ?? undefined,
             isStreaming: false,
             toolsUsed: ctx.tools.length > 0 ? [...ctx.tools] : undefined,
             interrupt: ctx.interrupt ?? undefined,
@@ -104,7 +185,16 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
       activity.seedThinking();
       setMessages((prev) => [...prev, { role: "ai", content: "", isStreaming: true }]);
 
-      const ctx: StreamCtx = { content: "", mutated: false, interrupt: null, tools: [] };
+      const ctx: StreamCtx = {
+        content: "",
+        mutated: false,
+        interrupt: null,
+        tools: [],
+        table: null,
+        chart: null,
+        facts: null,
+        suggestions: null,
+      };
       const abort = new AbortController();
       abortRef.current = abort;
 
@@ -131,7 +221,22 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
         }
       } catch (err) {
         const e = err as { name?: string; message?: string };
-        if (e?.name === "AbortError") return;
+        if (e?.name === "AbortError") {
+          // User hit stop (or navigated away): keep whatever streamed so far
+          // as a finished message instead of leaving a spinning bubble.
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            {
+              role: "ai",
+              content: stripHarmonyLeak(ctx.content) || "Stopped.",
+              table: ctx.table ?? undefined,
+              chart: ctx.chart ?? undefined,
+              facts: ctx.facts ?? undefined,
+              isStreaming: false,
+            },
+          ]);
+          return;
+        }
         console.error("[useChat]", err);
         const message = e?.message || "Something went wrong. Please try again.";
         toast.error(message);
@@ -193,16 +298,40 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
     [isLoading, stream]
   );
 
+  // Pull the latest shared session into this hook instance. Needed by the
+  // floating widget: it mounts once at app load and never remounts, so its
+  // state goes stale whenever the /chat page (a separate instance on the same
+  // sessionKey) advances the conversation. No-op while this instance streams.
+  const resync = useCallback(() => {
+    if (isLoading) return;
+    const c = sessionCache.get(sessionKey);
+    const restored = restoreMessages(c?.messages);
+    if (restored) {
+      setMessages(restored);
+      setLastUsage(c?.lastUsage ?? null);
+      summaryRef.current = c?.summary ?? "";
+      summarizedCountRef.current = c?.summarizedCount ?? 0;
+      threadIdRef.current = c?.threadId ?? threadIdRef.current;
+    } else {
+      // Cache cleared elsewhere ("New chat" on the other surface).
+      setMessages([]);
+      setLastUsage(null);
+      summaryRef.current = "";
+      summarizedCountRef.current = 0;
+    }
+  }, [isLoading, sessionKey]);
+
   const reset = useCallback(() => {
     abortRef.current?.abort();
+    sessionCache.delete(sessionKey);
     threadIdRef.current = newThreadId();
     summaryRef.current = "";
     summarizedCountRef.current = 0;
-    setMessages([welcomeMessage]);
+    setMessages([]);
     activity.clear();
     setIsLoading(false);
     setLastUsage(null);
-  }, [activity, welcomeMessage]);
+  }, [activity, sessionKey]);
 
   const cancel = useCallback(() => abortRef.current?.abort(), []);
 
@@ -214,6 +343,7 @@ export function useChat({ welcomeMessage, trackUsage = false }: UseChatOptions) 
     send,
     resumeInterrupt,
     reset,
+    resync,
     cancel,
   };
 }

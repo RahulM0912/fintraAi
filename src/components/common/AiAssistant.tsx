@@ -8,13 +8,14 @@ import { useChat } from "@/lib/chat/useChat";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
 import { ChatInput, type ChatInputHandle } from "@/components/chat/ChatInput";
-import { ASSISTANT_SUGGESTIONS, ASSISTANT_WELCOME } from "@/components/chat/suggestions";
+import { ASSISTANT_SUGGESTIONS, MODAL_WELCOME } from "@/components/chat/suggestions";
 
 export function AiAssistant() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const chat = useChat({ welcomeMessage: ASSISTANT_WELCOME });
+  // Same sessionKey as the /chat page — one conversation across both surfaces.
+  const chat = useChat({ trackUsage: true, sessionKey: "main" });
 
   const inputRef = useRef<ChatInputHandle>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -33,11 +34,28 @@ export function AiAssistant() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  // This widget mounts once and survives route changes, so its copy of the
+  // shared session goes stale when the /chat page advances the conversation.
+  // Re-read the session whenever the widget is opened or the route changes.
+  useEffect(() => {
+    if (isOpen) chat.resync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, pathname]);
+
   const handleSend = async (text?: string) => {
     const value = (text ?? input).trim();
     if (!value) return;
     setInput("");
     await chat.send(value);
+  };
+
+  const handleSuggestion = (prompt: string, mode: "send" | "prefill") => {
+    if (mode === "prefill") {
+      setInput(prompt);
+      inputRef.current?.focus();
+      return;
+    }
+    void handleSend(prompt);
   };
 
   // Let other parts of the app (e.g. the dashboard insight card) open the
@@ -97,6 +115,8 @@ export function AiAssistant() {
 
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex flex-col gap-4">
+                {/* Static welcome — UI chrome, not part of the shared session */}
+                <MessageBubble message={MODAL_WELCOME} variant="compact" />
                 {chat.messages.map((msg, i) => {
                   const isLast = i === chat.messages.length - 1;
                   return (
@@ -105,8 +125,10 @@ export function AiAssistant() {
                       message={msg}
                       activityLog={isLast ? chat.activityLog : []}
                       isLoading={chat.isLoading}
+                      isLast={isLast}
                       variant="compact"
                       onResolveInterrupt={chat.resumeInterrupt}
+                      onSuggestion={handleSuggestion}
                     />
                   );
                 })}
@@ -120,7 +142,7 @@ export function AiAssistant() {
                   suggestions={ASSISTANT_SUGGESTIONS}
                   variant="pill"
                   disabled={chat.isLoading}
-                  onSelect={handleSend}
+                  onSelect={handleSuggestion}
                 />
               </div>
               <ChatInput
@@ -128,6 +150,7 @@ export function AiAssistant() {
                 value={input}
                 onChange={setInput}
                 onSend={() => handleSend()}
+                onStop={chat.cancel}
                 isLoading={chat.isLoading}
                 placeholder="Add ₹500 for food today..."
                 variant="input"
