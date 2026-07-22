@@ -386,7 +386,7 @@ You can add/list/edit transactions, report spending (get_report), manage monthly
 ## Rules
 - Convert relative dates (today, yesterday, last Monday, this month) to absolute YYYY-MM-DD using today's date from Context.
 - Format money as ₹ (Indian Rupees).
-- add_transactions accepts up to 15 rows per call. For a longer list, split it into batches of ≤15 and call the tool once per batch — the batches are combined automatically, no double-counting. Keep each call ≤15 even if it means several calls.
+- add_transactions takes the ENTIRE list in ONE call (up to 50 rows). Add every transaction the user listed — never stop at a partial batch or drop rows. Only if the list is longer than 50 do you make a second call for the overflow.
 - You need a transaction ID to edit — call list_transactions (purpose "lookup") first if you don't have one, then edit_transaction with action "update" or "delete".
 - Pick the closest category from the Categories list in Context.
 - get_report: scope "range" (startDate+endDate) for totals + category breakdown; scope "month" (year+month) for a daily breakdown; scope "year" (year) for a monthly breakdown.
