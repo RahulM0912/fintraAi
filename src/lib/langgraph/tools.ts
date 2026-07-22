@@ -249,13 +249,13 @@ export const addTransactionsToolDef = tool(
   {
     name: "add_transactions",
     description:
-      "Add one or more income/expense transactions in a single call. Always pass the full list — never call this multiple times in one turn.",
+      "Add income/expense transactions, up to 15 per call. For a longer list, call this repeatedly with batches of at most 15 rows each — results are aggregated safely, no double-counting. Smaller batches are more reliable than one oversized call.",
     schema: z.object({
       transactions: z
         .array(txItemSchema)
         .min(1)
-        .max(20)
-        .describe("Transactions to add (1-20)"),
+        .max(15)
+        .describe("Transactions to add (1-15). Split longer lists across multiple calls."),
     }),
   }
 );
@@ -910,3 +910,4 @@ export const MUTATING_TOOL_NAMES = new Set([
   "edit_transaction",
   "budget",
 ]);
+  
