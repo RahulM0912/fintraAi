@@ -249,13 +249,13 @@ export const addTransactionsToolDef = tool(
   {
     name: "add_transactions",
     description:
-      "Add income/expense transactions, up to 15 per call. For a longer list, call this repeatedly with batches of at most 15 rows each — results are aggregated safely, no double-counting. Smaller batches are more reliable than one oversized call.",
+      "Add income/expense transactions. Pass the ENTIRE list the user gave in ONE call (up to 50 rows). Never truncate or stop at a partial batch — every row the user listed must be in this call.",
     schema: z.object({
       transactions: z
         .array(txItemSchema)
         .min(1)
-        .max(15)
-        .describe("Transactions to add (1-15). Split longer lists across multiple calls."),
+        .max(50)
+        .describe("All transactions to add in this call (1-50). Include every row the user listed."),
     }),
   }
 );
