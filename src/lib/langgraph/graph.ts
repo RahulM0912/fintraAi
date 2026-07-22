@@ -52,9 +52,11 @@ const toolNode = new ToolNode(financeTools);
 // `apiKey` lets a user bring their own key; when omitted we fall back to the
 // managed server key from the environment.
 // Output cap: chat answers are short post render-fast-path; the cap stops
-// runaway output. 2048 leaves headroom for models whose reasoning/thinking
-// tokens count against the completion limit (gpt-oss, gemini-2.5).
-const MAX_OUTPUT_TOKENS = 2048;
+// runaway output. 8128 leaves headroom for models whose reasoning/thinking
+// tokens count against the completion limit (gpt-oss, gemini-2.5) AND for
+// bulk add_transactions calls, whose JSON args also spend the completion
+// budget — too low a cap truncates the tool call and the insert never runs.
+const MAX_OUTPUT_TOKENS = 8128;
 
 export function createModel(
   provider: ModelProvider,
@@ -384,7 +386,7 @@ You can add/list/edit transactions, report spending (get_report), manage monthly
 ## Rules
 - Convert relative dates (today, yesterday, last Monday, this month) to absolute YYYY-MM-DD using today's date from Context.
 - Format money as ₹ (Indian Rupees).
-- add_transactions takes the FULL list (1-20 rows) in one call — never call it twice in a turn.
+- add_transactions accepts up to 15 rows per call. For a longer list, split it into batches of ≤15 and call the tool once per batch — the batches are combined automatically, no double-counting. Keep each call ≤15 even if it means several calls.
 - You need a transaction ID to edit — call list_transactions (purpose "lookup") first if you don't have one, then edit_transaction with action "update" or "delete".
 - Pick the closest category from the Categories list in Context.
 - get_report: scope "range" (startDate+endDate) for totals + category breakdown; scope "month" (year+month) for a daily breakdown; scope "year" (year) for a monthly breakdown.
