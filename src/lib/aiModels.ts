@@ -32,6 +32,8 @@ export const BYO_PROVIDERS: ByoProvider[] = [
     keyUrl: "https://openrouter.ai/keys",
     keyPlaceholder: "sk-or-v1-...",
     models: [
+      { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },
+      { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B" },
       { id: "openai/gpt-4o-mini", label: "GPT-4o mini" },
       { id: "openai/gpt-4o", label: "GPT-4o" },
       { id: "anthropic/claude-haiku-4-5", label: "Claude Haiku 4.5" },
